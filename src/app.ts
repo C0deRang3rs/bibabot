@@ -8,10 +8,10 @@ const rest = express();
 rest.use(express.json());
 rest.use(express.urlencoded({extended: false}));
 
-let intervals = {},
-    chats = {};
+let intervals = {} as any,
+    chats = {} as any;
 
-async function changeTitle(ctx) {
+async function changeTitle(ctx: any) {
     try {
         const newName = await generateName();
         console.log(`[${ctx.chat.id}] New name: ${newName}`);
@@ -23,11 +23,8 @@ async function changeTitle(ctx) {
     }
 }
 
-bot.command('start', async (ctx) => {
-    if (intervals[ctx.chat.id] !== undefined) {
-        await ctx.reply('Уже запущен.');
-        return;
-    }
+bot.command('start', async (ctx: any) => {
+    if (!!intervals[ctx.chat.id]) return ctx.reply('Уже запущен.');
 
     intervals[ctx.chat.id] = setInterval(async () => await changeTitle(ctx), 12 * 60 * 60 * 1000);
 
@@ -36,18 +33,18 @@ bot.command('start', async (ctx) => {
     console.log(`[${ctx.chat.id}] Started`);
 });
 
-bot.command('stop', async (ctx) => {
+bot.command('stop', async (ctx: any) => {
     clearInterval(intervals[ctx.chat.id]);
     console.log(`[${ctx.chat.id}] Stopped`);
     await ctx.reply('Всё, больше не буду');
 });
 
-bot.command('rename', async (ctx) => {
+bot.command('rename', async (ctx: any) => {
     await changeTitle(ctx);
     console.log(`[${ctx.chat.id}] Renamed`);
 });
 
-rest.get('/chats', (req, res) => {
+rest.get('/chats', (req: any, res: any) => {
     res.send(chats);
 });
 
