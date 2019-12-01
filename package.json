@@ -1,0 +1,30 @@
+{
+  "name": "tg-chat-name-changer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/muuuzmich/tg-chat-name-changer.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/muuuzmich/tg-chat-name-changer/issues"
+  },
+  "homepage": "https://github.com/muuuzmich/tg-chat-name-changer#readme",
+  "dependencies": {
+    "az": "^0.2.3",
+    "express": "^4.17.1",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.5",
+    "telegraf": "^3.33.3",
+    "utf8": "^3.0.0",
+    "request": "^2.88.0"
+  },
+  "devDependencies": {}
+}
