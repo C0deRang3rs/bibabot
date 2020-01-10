@@ -18,7 +18,7 @@ export class GenerateNameService {
             const wordMap = {
                 'Nouns': {'neut': [], 'femn': [], 'masc': [],},
                 'ADJF': {'neut': [], 'femn': [], 'masc': [],},
-            };
+            } as any;
 
             words.forEach(word => {
                 const parse = Az.Morph(word)[0].tag.toString();
