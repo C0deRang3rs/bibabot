@@ -4,7 +4,7 @@
   "description": "",
   "main": "dist/index.js",
   "scripts": {
-    "start": "node dist/index.js",
+    "start": "npm i && node dist/index.js",
     "postinstall": "tsc",
     "watch": "tsc-watch --onSuccess 'node dist/index.js'"
   },
