@@ -14,29 +14,31 @@ export class GenerateNameService {
     public async generateName() {
         const words = await this.generateWords();
 
-        Az.Morph.init('node_modules/az/dicts', () => {
-            const wordMap = {
-                'Nouns': {'neut': [], 'femn': [], 'masc': [],},
-                'ADJF': {'neut': [], 'femn': [], 'masc': [],},
-            } as any;
-
-            words.forEach(word => {
-                const parse = Az.Morph(word)[0].tag.toString();
+        return new Promise((resolve, reject) => {
+            Az.Morph.init('node_modules/az/dicts', () => {
+                const wordMap = {
+                    'Nouns': {'neut': [], 'femn': [], 'masc': [],},
+                    'ADJF': {'neut': [], 'femn': [], 'masc': [],},
+                } as any;
+    
+                words.forEach(word => {
+                    const parse = Az.Morph(word)[0].tag.toString();
+                    ['masc', 'femn', 'neut'].forEach(sex => {
+                        if (parse.includes(sex) && parse.includes('NOUN')) {
+                            wordMap['Nouns'][sex].push(word);
+                        } else if (parse.includes(sex) && parse.includes('ADJF')) {
+                            wordMap['ADJF'][sex].push(word);
+                        }
+                    })
+                });
+    
                 ['masc', 'femn', 'neut'].forEach(sex => {
-                    if (parse.includes(sex) && parse.includes('NOUN')) {
-                        wordMap['Nouns'][sex].push(word);
-                    } else if (parse.includes(sex) && parse.includes('ADJF')) {
-                        wordMap['ADJF'][sex].push(word);
+                    if (wordMap['Nouns'][sex].length >= 1 && wordMap['ADJF'][sex].length >= 2) {
+                        const mapN = wordMap['Nouns'][sex];
+                        const mapA = wordMap['ADJF'][sex];
+                        resolve(`${mapA.pop()} ${mapA.pop()} ${mapN.pop()}`);
                     }
-                })
-            });
-
-            ['masc', 'femn', 'neut'].forEach(sex => {
-                if (wordMap['Nouns'][sex].length >= 1 && wordMap['ADJF'][sex].length >= 2) {
-                    const mapN = wordMap['Nouns'][sex];
-                    const mapA = wordMap['ADJF'][sex];
-                    return `${mapA.pop()} ${mapA.pop()} ${mapN.pop()}`;
-                }
+                });
             });
         });
     }
