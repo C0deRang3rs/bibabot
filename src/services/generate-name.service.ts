@@ -26,8 +26,8 @@ export class GenerateNameService {
 
                         wordMap['Nouns'][sex].push(word);
                     } else if (parse.includes(sex) && parse.includes('ADJF')) {
-                        if (!wordMap['ADJF']) wordMap['Nouns'] = [];
-                        if (!wordMap['ADJF'][sex]) wordMap['Nouns'][sex] = [];
+                        if (!wordMap['ADJF']) wordMap['ADJF'] = [];
+                        if (!wordMap['ADJF'][sex]) wordMap['ADJF'][sex] = [];
 
                         wordMap['ADJF'][sex].push(word);
                     }
