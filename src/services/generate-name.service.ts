@@ -15,15 +15,20 @@ export class GenerateNameService {
         const words = await this.generateWords();
 
         Az.Morph.init('node_modules/az/dicts', () => {
-
             const wordMap = [] as any;
 
             words.forEach(word => {
                 const parse = Az.Morph(word)[0].tag.toString();
                 ['masc', 'femn', 'neut'].forEach(sex => {
                     if (parse.includes(sex) && parse.includes('NOUN')) {
+                        if (!wordMap['Nouns']) wordMap['Nouns'] = [];
+                        if (!wordMap['Nouns'][sex]) wordMap['Nouns'][sex] = [];
+
                         wordMap['Nouns'][sex].push(word);
                     } else if (parse.includes(sex) && parse.includes('ADJF')) {
+                        if (!wordMap['ADJF']) wordMap['Nouns'] = [];
+                        if (!wordMap['ADJF'][sex]) wordMap['Nouns'][sex] = [];
+
                         wordMap['ADJF'][sex].push(word);
                     }
                 })
