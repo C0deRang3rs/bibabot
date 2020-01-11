@@ -93,7 +93,7 @@ export class Bot {
 
         if (isTimerActive) return ctx.reply('Уже запущен.');
 
-        await ctx.reply('Ща как буду раз в 12 часов имена менять');
+        await ctx.reply(`Ща как буду раз в ${TIMER_ITERATION} часов имена менять`);
         await this.changeTitle(ctx.chat.id);
         await this.redis.setAsync(`auto:rename:${ctx.chat.id.toString()}`, new Date().toISOString())
         console.log(`[${ctx.chat.id}] Started`);
