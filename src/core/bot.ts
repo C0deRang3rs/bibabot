@@ -47,17 +47,16 @@ export class Bot {
         const keys = await this.redis.keysAsync('auto:rename:*');
         if (!keys.length) return console.log('No timers');
 
-        console.log(`Timers: ${keys}`);
-
         const ids = keys.map((key: string) => key.split(':')[2]);
         const values = await this.redis.mgetAsync(keys);
         const objectedTimers: Record<string, string> = zipObject(ids, values);
 
-        for (const id in Object.keys(objectedTimers)) {
+        for (const id of Object.keys(objectedTimers)) {
             console.log(`[${id}] Processing`);
             if ((Math.abs(+new Date() - +new Date(objectedTimers[id])) / TimerUnits.MINUTES) > TIMER_ITERATION) {
                 console.log(`[${id}] Auto-rename`);
                 await this.changeTitle(parseInt(id));
+                await this.redis.setAsync(`auto:rename:${id}`, new Date().toISOString());
             }
         }
     }
@@ -100,7 +99,7 @@ export class Bot {
 
         await ctx.reply(`Ща как буду раз в ${TIMER_ITERATION} часов имена менять`);
         await this.changeTitle(ctx.chat.id);
-        await this.redis.setAsync(`auto:rename:${ctx.chat.id.toString()}`, new Date().toISOString())
+        await this.redis.setAsync(`auto:rename:${ctx.chat.id.toString()}`, new Date().toISOString());
         console.log(`[${ctx.chat.id}] Started`);
     }
 
