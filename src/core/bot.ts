@@ -1,6 +1,18 @@
 import Telegraf, {ContextMessageUpdate} from 'telegraf';
-import { Chat } from 'telegraf/typings/telegram-types';
 import { GenerateNameService } from '../services/generate-name.service';
+import Bull from 'bull';
+import redis from 'redis';
+import bluebird from 'bluebird';
+import zipObject from 'lodash.zipobject';
+
+bluebird.promisifyAll(redis);
+
+const TIMER_ITERATION = 1;
+
+enum TimerUnits {
+    MINUTES = 60000,
+    HOURS = 3600000
+}
 
 enum CommandType {
     START = 'start',
@@ -10,13 +22,39 @@ enum CommandType {
 
 export class Bot {
     private bot: Telegraf<ContextMessageUpdate>;
-    private intervals: Record<string, NodeJS.Timeout> = {};
-    private chats: Record<string, Chat> = {};
+    private queue: Bull.Queue = {} as Bull.Queue;
+    private redis: redis.RedisClient | any;
 
     constructor() {
         this.bot = new Telegraf(process.env.BOT_TOKEN as string);
+        this.initRedis();
+        this.initJobQueue();
         this.initListeners();
         this.startPooling();
+    }
+
+    private initJobQueue() {
+        this.queue = new Bull('auto renames', process.env.REDIS_URL as string);
+        this.queue.process(async (job) => await this.resolveRenames());
+        this.queue.add('timeToRename', { repeat: { cron: '* * * * *' } });
+    }
+
+    private async initRedis() {
+        this.redis = redis.createClient({ url: process.env.REDIS_URL as string });
+    }
+
+    private async resolveRenames() {
+        const keys = await this.redis.keysAsync('auto:rename:*');
+        if (!keys.length) return console.log('No timers');
+
+        const ids = keys.map((key: string) => key.split(':')[2]);
+        const values = await this.redis.mgetAsync(keys);
+        const objectedTimers: Record<string, string> = zipObject(ids, values);
+
+        for (const id in Object.keys(objectedTimers)) {
+            if ((Math.abs(+new Date() - +new Date(objectedTimers[id])) / TimerUnits.HOURS) > TIMER_ITERATION)
+                await this.changeTitle(parseInt(id));
+        }
     }
 
     private async startPooling() {
@@ -44,7 +82,6 @@ export class Bot {
                     break;
             }
         } catch (e) {
-            console.error(e);
             await this.bot.telegram.sendMessage('-395013027', e.message)
         }
     }
@@ -52,19 +89,20 @@ export class Bot {
     private async onStart(ctx: ContextMessageUpdate) {
         if (!ctx.chat) return;
 
-        if (!!this.intervals[ctx.chat.id]) return ctx.reply('Уже запущен.');
+        const isTimerActive = await this.redis.getAsync(`auto:rename:${ctx.chat.id.toString()}`);
 
-        this.intervals[ctx.chat.id] = setInterval(async () => await this.changeTitle(ctx), 12 * 60 * 60 * 1000);
+        if (isTimerActive) return ctx.reply('Уже запущен.');
 
         await ctx.reply('Ща как буду раз в 12 часов имена менять');
-        await this.changeTitle(ctx);
+        await this.changeTitle(ctx.chat.id);
+        await this.redis.setAsync(`auto:rename:${ctx.chat.id.toString()}`, new Date().toISOString())
         console.log(`[${ctx.chat.id}] Started`);
     }
 
     private async onStop(ctx: ContextMessageUpdate) {
         if (!ctx.chat) return;
 
-        clearInterval(this.intervals[ctx.chat.id]);
+        await this.redis.delAsync(`auto:rename:${ctx.chat.id.toString()}`);
         console.log(`[${ctx.chat.id}] Stopped`);
         await ctx.reply('Всё, больше не буду');
     }
@@ -72,17 +110,13 @@ export class Bot {
     private async onRename(ctx: ContextMessageUpdate) {
         if (!ctx.chat) return;
 
-        await this.changeTitle(ctx);
+        await this.changeTitle(ctx.chat.id);
         console.log(`[${ctx.chat.id}] Renamed`);
     }
 
-    private async changeTitle(ctx: ContextMessageUpdate) {
-        if (!ctx.chat) return;
-
+    private async changeTitle(id: number) {
         const newName = await GenerateNameService.getInstance().generateName();
-        console.log(`[${ctx.chat.id}] New name: ${newName}`);
-        await (this.bot.telegram as any).setChatTitle(ctx.chat.id, newName);
-
-        if (!this.chats[ctx.chat.id.toString()]) this.chats[ctx.chat.id] = ctx.chat;
+        console.log(`[${id}] New name: ${newName}`);
+        await (this.bot.telegram as any).setChatTitle(id, newName);
     }
 }
