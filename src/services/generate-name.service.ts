@@ -4,6 +4,8 @@ const Az = require('az');
 export class GenerateNameService {
     private static instance: GenerateNameService;
 
+    private constructor() {}
+
     public static getInstance(): GenerateNameService {
         if (!GenerateNameService.instance) 
             GenerateNameService.instance = new GenerateNameService();
