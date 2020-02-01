@@ -40,6 +40,11 @@ export class Bot {
         this.bot.command(CommandType.STOP, async (ctx) => await this.changeTitleService.onStop(ctx));
         this.bot.command(CommandType.RENAME, async (ctx) => await this.changeTitleService.onRename(ctx));
         this.bot.command(CommandType.ITERATION_CHANGE, async (ctx) => await this.changeTitleService.onIterationChange(ctx));
-        this.bot.catch((err: Error) => this.bot.telegram.sendMessage(process.env.DEBUG_CHAT_ID as string, err.message));
+        this.bot.catch((err: Error) => this.handleError(err));
+    }
+
+    public async handleError(err: Error) {
+        console.log('Error: ' + err.message);
+        await this.bot.telegram.sendMessage(process.env.DEBUG_CHAT_ID as string, 'Error: ' + err.message)
     }
 }

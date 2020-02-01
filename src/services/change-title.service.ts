@@ -46,7 +46,11 @@ export class ChangeTitleService {
             console.log(`[${id}] Processing`);
             if ((Math.abs(+new Date() - +new Date(objectedTimers[id])) / this.iterationUnits) > this.iterationTime) {
                 console.log(`[${id}] Auto-rename`);
-                await this.changeTitle(parseInt(id));
+                try {
+                    await this.changeTitle(parseInt(id));
+                } catch (err) {
+                    await Bot.getInstance().handleError(err);
+                }
                 await this.redis.setAsync(`auto:rename:${id}`, new Date().toISOString());
             } else {
                 console.log(`[${id}] Отказано нахуй`);

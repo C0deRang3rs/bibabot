@@ -20,7 +20,7 @@ export class Redis {
         this.client = redis.createClient({ url: process.env.REDIS_URL as string });
     }
 
-    public static getInstance() {
+    public static getInstance(): Redis {
         if (!Redis.instance)
             Redis.instance = new Redis();
 
