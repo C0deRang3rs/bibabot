@@ -1,2 +1,2 @@
-# tg-chat-name-changer
-bot123
+# ChangeNameBot
+@ChangeNameDevBot
