@@ -16,15 +16,6 @@ export class ChangeTitleService {
     private iterationUnits = TimerUnits.MINUTES;
     private iterationTime = 1;
 
-    private constructor(private redis: PromisifiedRedis) {}
-
-    public static getInstance(): ChangeTitleService {
-        if (!ChangeTitleService.instance)
-            ChangeTitleService.instance = new ChangeTitleService(Redis.getInstance().client);
-        
-        return ChangeTitleService.instance;
-    }
-
     get unitsName() {
         switch(this.iterationUnits) {
             case TimerUnits.HOURS:
@@ -32,6 +23,20 @@ export class ChangeTitleService {
             case TimerUnits.MINUTES:
                 return this.iterationTime === 1 ? 'минуту' : this.iterationTime >= 2 && this.iterationTime <= 4 ? 'минуты' : 'минут';
         }
+    }
+
+    private constructor(
+        private redis: PromisifiedRedis,
+        private bot: Bot
+    ) {
+        this.initListeners();
+    }
+
+    public static getInstance(): ChangeTitleService {
+        if (!ChangeTitleService.instance)
+            ChangeTitleService.instance = new ChangeTitleService(Redis.getInstance().client, Bot.getInstance());
+        
+        return ChangeTitleService.instance;
     }
 
     public async resolveRenames(done: Bull.DoneCallback) {
@@ -106,9 +111,16 @@ export class ChangeTitleService {
         console.log(`[${ctx.chat.id}] Renamed`);
     }
 
+    private initListeners() {
+        this.bot.app.command(CommandType.START, async (ctx) => await this.onStart(ctx));
+        this.bot.app.command(CommandType.STOP, async (ctx) => await this.onStop(ctx));
+        this.bot.app.command(CommandType.RENAME, async (ctx) => await this.onRename(ctx));
+        this.bot.app.command(CommandType.ITERATION_CHANGE, async (ctx) => await this.onIterationChange(ctx));
+    }
+
     private async changeTitle(id: number) {
         const newName = await GenerateNameService.getInstance().generateName();
         console.log(`[${id}] New name: ${newName}`);
-        await (Bot.getInstance().bot.telegram as any).setChatTitle(id, newName);
+        await (this.bot.app.telegram as any).setChatTitle(id, newName);
     }
 }

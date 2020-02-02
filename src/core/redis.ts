@@ -16,14 +16,14 @@ export class Redis {
         this.initMain();
     }
 
-    private async initMain() {
-        this.client = redis.createClient({ url: process.env.REDIS_URL as string });
-    }
-
     public static getInstance(): Redis {
         if (!Redis.instance)
             Redis.instance = new Redis();
 
         return Redis.instance;
+    }
+
+    private async initMain() {
+        this.client = redis.createClient({ url: process.env.REDIS_URL as string });
     }
 }
