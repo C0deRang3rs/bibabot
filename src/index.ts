@@ -1,5 +1,11 @@
 import { Bot } from "./core/bot";
 import { Server } from "./core/server";
+import { Queue } from "./core/queue";
 
-new Bot();
+if (process.env.CLOUD !== 'true') {
+    require('dotenv').config();
+}
+
+Bot.getInstance();
 new Server();
+new Queue();

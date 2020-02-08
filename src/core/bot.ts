@@ -1,88 +1,45 @@
-import Telegraf, {ContextMessageUpdate} from 'telegraf';
-import { Chat } from 'telegraf/typings/telegram-types';
-import { GenerateNameService } from '../services/generate-name.service';
+import Telegraf, { ContextMessageUpdate } from 'telegraf';
 
-enum CommandType {
+export enum CommandType {
     START = 'start',
     STOP = 'stop',
-    RENAME = 'rename'
+    RENAME = 'rename',
+    ITERATION_CHANGE = 'iteration_change'
 }
 
 export class Bot {
-    private bot: Telegraf<ContextMessageUpdate>;
-    private intervals: Record<string, NodeJS.Timeout> = {};
-    private chats: Record<string, Chat> = {};
+    private static instance: Bot;
 
-    constructor() {
-        this.bot = new Telegraf(process.env.BOT_TOKEN as string);
-        this.initListeners();
+    public app!: Telegraf<ContextMessageUpdate>;
+
+    private constructor() {
+        this.initMain();
+        this.initHandlers();
         this.startPooling();
     }
 
+    public static getInstance(): Bot {
+        if (!Bot.instance)
+            Bot.instance = new Bot();
+
+        return Bot.instance;
+    }
+
+    public async handleError(err: Error) {
+        console.log('Error: ' + err.message);
+        await this.app.telegram.sendMessage(process.env.DEBUG_CHAT_ID as string, 'Error: ' + err.message)
+    }
+
+    private async initMain() {
+        this.app = new Telegraf(process.env.BOT_TOKEN as string);
+    }
+
     private async startPooling() {
-        await this.bot.launch();
+        await this.app.launch();
         console.log('Bot is up');
     }
 
-    private initListeners() {
-        this.bot.command(CommandType.START, async (ctx) => await this.handleProcessor(ctx, CommandType.START));
-        this.bot.command(CommandType.STOP, async (ctx) => await this.handleProcessor(ctx, CommandType.STOP));
-        this.bot.command(CommandType.RENAME, async (ctx) => await this.handleProcessor(ctx, CommandType.RENAME));
-    }
-
-    private async handleProcessor(ctx: ContextMessageUpdate, type: CommandType) {
-        try {
-            switch (type) {
-                case CommandType.START:
-                    await this.onStart(ctx);
-                    break;
-                case CommandType.STOP:
-                    await this.onStop(ctx);
-                    break;
-                case CommandType.RENAME:
-                    await this.onRename(ctx);
-                    break;
-            }
-        } catch (e) {
-            console.error(e);
-            await this.bot.telegram.sendMessage('-395013027', e.message)
-        }
-    }
-
-    private async onStart(ctx: ContextMessageUpdate) {
-        if (!ctx.chat) return;
-
-        if (!!this.intervals[ctx.chat.id]) return ctx.reply('Уже запущен.');
-
-        this.intervals[ctx.chat.id] = setInterval(async () => await this.changeTitle(ctx), 12 * 60 * 60 * 1000);
-
-        await ctx.reply('Ща как буду раз в 12 часов имена менять');
-        await this.changeTitle(ctx);
-        console.log(`[${ctx.chat.id}] Started`);
-    }
-
-    private async onStop(ctx: ContextMessageUpdate) {
-        if (!ctx.chat) return;
-
-        clearInterval(this.intervals[ctx.chat.id]);
-        console.log(`[${ctx.chat.id}] Stopped`);
-        await ctx.reply('Всё, больше не буду');
-    }
-
-    private async onRename(ctx: ContextMessageUpdate) {
-        if (!ctx.chat) return;
-
-        await this.changeTitle(ctx);
-        console.log(`[${ctx.chat.id}] Renamed`);
-    }
-
-    private async changeTitle(ctx: ContextMessageUpdate) {
-        if (!ctx.chat) return;
-
-        const newName = await GenerateNameService.getInstance().generateName();
-        console.log(`[${ctx.chat.id}] New name: ${newName}`);
-        await (this.bot.telegram as any).setChatTitle(ctx.chat.id, newName);
-
-        if (!this.chats[ctx.chat.id.toString()]) this.chats[ctx.chat.id] = ctx.chat;
+    private initHandlers() {
+        this.app.catch((err: Error) => this.handleError(err));
     }
 }

@@ -4,6 +4,8 @@ const Az = require('az');
 export class GenerateNameService {
     private static instance: GenerateNameService;
 
+    private constructor() {}
+
     public static getInstance(): GenerateNameService {
         if (!GenerateNameService.instance) 
             GenerateNameService.instance = new GenerateNameService();
@@ -15,6 +17,10 @@ export class GenerateNameService {
         const words = await this.generateWords();
 
         return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                reject(new Error('Generate name timeout'));
+            }, 10000);
+
             Az.Morph.init('node_modules/az/dicts', () => {
                 const wordMap = {
                     'Nouns': {'neut': [], 'femn': [], 'masc': [],},
