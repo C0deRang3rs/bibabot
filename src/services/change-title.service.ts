@@ -33,8 +33,8 @@ export class ChangeTitleService {
     }
 
     private constructor(
-        private redis: PromisifiedRedis,
-        private bot: Bot
+        private readonly redis: PromisifiedRedis,
+        private readonly bot: Bot
     ) {
         this.initListeners();
     }
