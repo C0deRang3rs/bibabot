@@ -1,12 +1,5 @@
 import Telegraf, { ContextMessageUpdate } from 'telegraf';
 
-export enum CommandType {
-    START = 'start',
-    STOP = 'stop',
-    RENAME = 'rename',
-    ITERATION_CHANGE = 'iteration_change'
-}
-
 export class Bot {
     private static instance: Bot;
 

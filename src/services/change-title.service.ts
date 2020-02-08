@@ -1,9 +1,16 @@
 import { ContextMessageUpdate } from "telegraf";
 import { GenerateNameService } from '../services/generate-name.service';
 import zipObject from 'lodash.zipobject';
-import { CommandType, Bot } from "../core/bot";
+import { Bot } from "../core/bot";
 import { Redis, PromisifiedRedis } from "../core/redis";
 import Bull from "bull";
+
+export enum ChangeTitleCommandType {
+    START = 'start',
+    STOP = 'stop',
+    RENAME = 'rename',
+    ITERATION_CHANGE = 'iteration_change'
+}
 
 enum TimerUnits {
     MINUTES = 60000,
@@ -13,8 +20,8 @@ enum TimerUnits {
 export class ChangeTitleService {
     private static instance: ChangeTitleService;
     
-    private iterationUnits = TimerUnits.MINUTES;
-    private iterationTime = 1;
+    private iterationUnits = TimerUnits.HOURS;
+    private iterationTime = 12;
 
     get unitsName() {
         switch(this.iterationUnits) {
@@ -66,7 +73,7 @@ export class ChangeTitleService {
     }
 
     public async onIterationChange(ctx: ContextMessageUpdate) {
-        const commandData = ctx.message!.text!.split(CommandType.ITERATION_CHANGE)[1].trim().split(' ');
+        const commandData = ctx.message!.text!.split(ChangeTitleCommandType.ITERATION_CHANGE)[1].trim().split(' ');
 
         switch(commandData[1]) {
             case 'hours':
@@ -75,12 +82,12 @@ export class ChangeTitleService {
             case 'minutes':
                 this.iterationUnits = TimerUnits.MINUTES;
                 break;
-            default: return ctx.reply('Wrong time format, try something like: 2 hours, 5 minutes, 1 hours(lmao)');
+            default: return ctx.reply('Wrong time format, try something like: 2 hours, 5 minutes, 1 hours (lmao)');
         }
         this.iterationTime = +commandData[0];
 
         console.log(`[${ctx.chat!.id}] Interval - ${this.iterationTime}, units - ${this.iterationUnits}`);
-        ctx.reply('Iteration interval changed');
+        await ctx.reply('Iteration interval changed');
     }
 
     public async onStart(ctx: ContextMessageUpdate) {
@@ -112,10 +119,10 @@ export class ChangeTitleService {
     }
 
     private initListeners() {
-        this.bot.app.command(CommandType.START, async (ctx) => await this.onStart(ctx));
-        this.bot.app.command(CommandType.STOP, async (ctx) => await this.onStop(ctx));
-        this.bot.app.command(CommandType.RENAME, async (ctx) => await this.onRename(ctx));
-        this.bot.app.command(CommandType.ITERATION_CHANGE, async (ctx) => await this.onIterationChange(ctx));
+        this.bot.app.command(ChangeTitleCommandType.START, async (ctx) => await this.onStart(ctx));
+        this.bot.app.command(ChangeTitleCommandType.STOP, async (ctx) => await this.onStop(ctx));
+        this.bot.app.command(ChangeTitleCommandType.RENAME, async (ctx) => await this.onRename(ctx));
+        this.bot.app.command(ChangeTitleCommandType.ITERATION_CHANGE, async (ctx) => await this.onIterationChange(ctx));
     }
 
     private async changeTitle(id: number) {
