@@ -20,8 +20,8 @@ enum TimerUnits {
 export class ChangeTitleService {
     private static instance: ChangeTitleService;
     
-    private iterationUnits = TimerUnits.MINUTES;
-    private iterationTime = 1;
+    private iterationUnits = TimerUnits.HOURS;
+    private iterationTime = 12;
 
     get unitsName() {
         switch(this.iterationUnits) {
