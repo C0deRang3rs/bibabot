@@ -123,6 +123,7 @@ export class ChangeTitleService {
         this.bot.app.command(ChangeTitleCommandType.STOP, async (ctx) => await this.onStop(ctx));
         this.bot.app.command(ChangeTitleCommandType.RENAME, async (ctx) => await this.onRename(ctx));
         this.bot.app.command(ChangeTitleCommandType.ITERATION_CHANGE, async (ctx) => await this.onIterationChange(ctx));
+        console.log('Inited 1');
     }
 
     private async changeTitle(id: number) {

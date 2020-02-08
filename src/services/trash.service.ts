@@ -27,6 +27,7 @@ export class TrashService {
         this.bot.app.command(TrashCommand.FLIP, async (ctx) => await this.coinFlip(ctx));
         this.bot.app.command(TrashCommand.ROLL, async (ctx) => await this.roll(ctx));
         this.bot.app.on('message', async (ctx) => await this.trashHandler(ctx));
+        console.log('Inited 2');
     }
 
     private async trashHandler(ctx: ContextMessageUpdate) {
@@ -59,7 +60,6 @@ export class TrashService {
             const parameters = payload.split('-');
 
             if (!parameters[0] || !parameters[1]) return ctx.reply('Wrong format');
-            console.log(parameters);
 
             from = +parameters[0];
             to = +parameters[1];
