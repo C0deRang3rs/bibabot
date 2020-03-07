@@ -1,7 +1,7 @@
 import { ContextMessageUpdate } from "telegraf";
 import { GenerateNameService } from '../services/generate-name.service';
 import zipObject from 'lodash.zipobject';
-import { Bot } from "../core/bot";
+import { Bot, BotCommandType } from "../core/bot";
 import { Redis, PromisifiedRedis } from "../core/redis";
 import Bull from "bull";
 
@@ -119,11 +119,12 @@ export class ChangeTitleService {
     }
 
     private initListeners() {
-        this.bot.app.command(ChangeTitleCommandType.START, async (ctx) => await this.onStart(ctx));
-        this.bot.app.command(ChangeTitleCommandType.STOP, async (ctx) => await this.onStop(ctx));
-        this.bot.app.command(ChangeTitleCommandType.RENAME, async (ctx) => await this.onRename(ctx));
-        this.bot.app.command(ChangeTitleCommandType.ITERATION_CHANGE, async (ctx) => await this.onIterationChange(ctx));
-        console.log('Inited 1');
+        this.bot.addListeners([
+            { type: BotCommandType.COMMAND, name: ChangeTitleCommandType.START, callback: (ctx) => this.onStart(ctx) },
+            { type: BotCommandType.COMMAND, name: ChangeTitleCommandType.STOP, callback: (ctx) => this.onStop(ctx) },
+            { type: BotCommandType.COMMAND, name: ChangeTitleCommandType.RENAME, callback: (ctx) => this.onRename(ctx) },
+            { type: BotCommandType.COMMAND, name: ChangeTitleCommandType.ITERATION_CHANGE, callback: (ctx) => this.onIterationChange(ctx) },
+        ]);
     }
 
     private async changeTitle(id: number) {

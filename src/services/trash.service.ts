@@ -1,4 +1,4 @@
-import { Bot } from "../core/bot";
+import { Bot, BotCommandType, BotEvent } from "../core/bot";
 import { ContextMessageUpdate } from "telegraf";
 import fs from 'fs';
 
@@ -18,16 +18,17 @@ export class TrashService {
 
     public static getInstance(): TrashService {
         if (!TrashService.instance)
-        TrashService.instance = new TrashService(Bot.getInstance());
+            TrashService.instance = new TrashService(Bot.getInstance());
         
         return TrashService.instance;
     }
 
     private initListeners() {
-        this.bot.app.command(TrashCommand.FLIP, async (ctx) => await this.coinFlip(ctx));
-        this.bot.app.command(TrashCommand.ROLL, async (ctx) => await this.roll(ctx));
-        this.bot.app.on('message', async (ctx) => await this.trashHandler(ctx));
-        console.log('Inited 2');
+        this.bot.addListeners([
+            { type: BotCommandType.COMMAND, name: TrashCommand.FLIP, callback: (ctx) => this.coinFlip(ctx) },
+            { type: BotCommandType.COMMAND, name: TrashCommand.ROLL, callback: (ctx) => this.roll(ctx) },
+            { type: BotCommandType.ON, name: BotEvent.MESSAGE, callback: (ctx) => this.trashHandler(ctx) },
+        ]);
     }
 
     private async trashHandler(ctx: ContextMessageUpdate) {
@@ -37,9 +38,8 @@ export class TrashService {
             await ctx.reply(`Не "один хуй", а "однохуйственно". Учи рузкий блядь`);
         if (ctx.message!.text!.toLowerCase().includes('иди нахуй'))
             await ctx.reply(`Сам иди нахуй`);
-        if (ctx.message!.text!.toLowerCase() === 'f') {
+        if (ctx.message!.text!.toLowerCase() === 'f') 
             await ctx.replyWithPhoto({ source: fs.createReadStream(__dirname + '/../../assets/F.png') });
-        }
     }
 
     private async coinFlip(ctx: ContextMessageUpdate) {
