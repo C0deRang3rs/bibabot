@@ -1,7 +1,24 @@
-import Telegraf, { ContextMessageUpdate } from 'telegraf';
+import Telegraf, { ContextMessageUpdate,  } from 'telegraf';
+import { MessageSubTypes } from 'telegraf/typings/telegram-types';
+
+export enum BotEvent {
+    MESSAGE = 'message'
+}
+
+export enum BotCommandType {
+    ON = 'on',
+    COMMAND = 'command'
+}
+
+interface BotListener {
+    type: BotCommandType;
+    name: MessageSubTypes | string;
+    callback(ctx: ContextMessageUpdate): void;
+}
 
 export class Bot {
     private static instance: Bot;
+    private listeners: Array<BotListener> = [];
 
     public app!: Telegraf<ContextMessageUpdate>;
 
@@ -16,6 +33,14 @@ export class Bot {
             Bot.instance = new Bot();
 
         return Bot.instance;
+    }
+
+    public addListeners(list: Array<BotListener>) {
+        this.listeners = [...this.listeners, ...list];
+    }
+
+    public applyListeners() {
+        this.listeners.forEach((listener) => this.app[listener.type](listener.name as MessageSubTypes, listener.callback))
     }
 
     public async handleError(err: Error) {
