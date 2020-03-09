@@ -15,7 +15,7 @@ export class Queue {
 
     private async initJobQueue() {
         this.queue.process(async (job, done) => await ChangeTitleService.getInstance().resolveRenames(done));
-        await this.queue.add({}, { repeat: { cron: '* * * * *' } });
+        await this.queue.add({}, { repeat: { cron: '* * * * *' }, removeOnComplete: true });
         console.log('Job queue created');
     }
 }
