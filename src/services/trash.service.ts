@@ -7,19 +7,7 @@ enum TrashCommand {
     FLIP = 'flip',
     ROLL = 'roll',
     FLIP_STAT = 'flip_stat',
-    BIBA = 'biba',
-    UNRANKED_BIBA = 'unbiba',
-    BIBA_TABLE = 'biba_table'
 }
-
-interface Biba {
-    size: string;
-    time: string;
-    username: string;
-}
-
-const POSITIVE_BIBA = 'Так держать!';
-const NEGATIVE_BIBA = 'Чет ты спустил малясь...';
 
 export class TrashService {
     private static instance: TrashService;
@@ -43,9 +31,6 @@ export class TrashService {
             { type: BotCommandType.COMMAND, name: TrashCommand.FLIP, callback: (ctx) => this.coinFlip(ctx) },
             { type: BotCommandType.COMMAND, name: TrashCommand.ROLL, callback: (ctx) => this.roll(ctx) },
             { type: BotCommandType.COMMAND, name: TrashCommand.FLIP_STAT, callback: (ctx) => this.coinFlipStat(ctx) },
-            { type: BotCommandType.COMMAND, name: TrashCommand.BIBA, callback: (ctx) => this.bibaMetr(ctx) },
-            { type: BotCommandType.COMMAND, name: TrashCommand.UNRANKED_BIBA, callback: (ctx) => this.unrankedBibaMetr(ctx) },
-            { type: BotCommandType.COMMAND, name: TrashCommand.BIBA_TABLE, callback: (ctx) => this.bibaTable(ctx) },
             { type: BotCommandType.ON, name: BotEvent.MESSAGE, callback: (ctx) => this.trashHandler(ctx) },
         ]);
     }
@@ -83,37 +68,6 @@ export class TrashService {
         await ctx.reply(
             `Tails - ${Math.round((tailsCount / (tailsCount + headsCount)) * 100)}%\nHeads - ${Math.round((headsCount / (tailsCount + headsCount)) * 100)}%`
         );
-    }
-
-    private async bibaMetr(ctx: ContextMessageUpdate) {
-        const biba = Math.floor(Math.random() * (35 + 1));
-        let bibaMessage = `У @${ctx.message?.from?.username} биба ${biba} см`;
-
-        const lastBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.message?.from?.id}`));
-
-        if (lastBiba) {
-            if ((Math.abs(+new Date() - +new Date(lastBiba.time)) / 3600000) < +process.env.HOURS_BETWEEN_BIBAS!)
-                return ctx.reply('Ты сегодня уже мерял бибу, приходи завтра');
-            bibaMessage = `У @${ctx.message?.from?.username} биба ${biba} см, в прошлый раз была ${lastBiba.size} см. ${biba - lastBiba.size > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA}`
-        }
-
-        await this.redis.setAsync(`biba:${ctx.message?.from?.id}`, JSON.stringify({ size: biba, time: new Date().toISOString(), username: ctx.message?.from?.username }));
-
-        await ctx.reply(bibaMessage);
-    }
-
-    private async unrankedBibaMetr(ctx: ContextMessageUpdate) {
-        await ctx.reply(`У @${ctx.message?.from?.username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
-    }
-
-    private async bibaTable(ctx: ContextMessageUpdate) {
-        const allBibasKeys: Array<string> = await this.redis.keysAsync('biba:*');
-        const allBibas: Array<Biba> = (await this.redis.mgetAsync(allBibasKeys)).map((rawBiba: string) => JSON.parse(rawBiba));
-        allBibas.sort((biba1, biba2) => (biba1.size < biba2.size) ? 1 : -1);
-
-        const message = allBibas.map((biba, index) => `${index + 1}. ${biba.username} - ${biba.size} см`);
-
-        ctx.reply(message.join('\n'));
     }
 
     private async roll(ctx: ContextMessageUpdate) {
