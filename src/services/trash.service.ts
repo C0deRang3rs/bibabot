@@ -1,24 +1,28 @@
 import { Bot, BotCommandType, BotEvent } from "../core/bot";
 import { ContextMessageUpdate } from "telegraf";
 import fs from 'fs';
+import { PromisifiedRedis, Redis } from "../core/redis";
 
 enum TrashCommand {
     FLIP = 'flip',
-    ROLL = 'roll'
+    ROLL = 'roll',
+    FLIP_STAT = 'flip_stat',
+    BIBA = 'biba',
 }
 
 export class TrashService {
     private static instance: TrashService;
 
     private constructor(
-        private readonly bot: Bot
+        private readonly bot: Bot,
+        private readonly redis: PromisifiedRedis
     ) {
         this.initListeners();
     }
 
     public static getInstance(): TrashService {
         if (!TrashService.instance)
-            TrashService.instance = new TrashService(Bot.getInstance());
+            TrashService.instance = new TrashService(Bot.getInstance(), Redis.getInstance().client);
         
         return TrashService.instance;
     }
@@ -27,6 +31,8 @@ export class TrashService {
         this.bot.addListeners([
             { type: BotCommandType.COMMAND, name: TrashCommand.FLIP, callback: (ctx) => this.coinFlip(ctx) },
             { type: BotCommandType.COMMAND, name: TrashCommand.ROLL, callback: (ctx) => this.roll(ctx) },
+            { type: BotCommandType.COMMAND, name: TrashCommand.FLIP_STAT, callback: (ctx) => this.coinFlipStat(ctx) },
+            { type: BotCommandType.COMMAND, name: TrashCommand.BIBA, callback: (ctx) => this.bibaMetr(ctx) },
             { type: BotCommandType.ON, name: BotEvent.MESSAGE, callback: (ctx) => this.trashHandler(ctx) },
         ]);
     }
@@ -45,7 +51,29 @@ export class TrashService {
     private async coinFlip(ctx: ContextMessageUpdate) {
         if (!ctx.message || !ctx.message.text) return ctx.reply('Empty message');
 
-        await ctx.reply((Math.floor(Math.random() * 2) == 0) ? 'Heads' : 'Tails');
+        const flipResult = (Math.floor(Math.random() * 2) == 0) ? 'Heads' : 'Tails';
+
+        const currentResultCount = await this.redis.getAsync(`${flipResult.toLowerCase()}:count`);
+
+        if (currentResultCount)
+            await this.redis.setAsync(`${flipResult.toLowerCase()}:count`, +currentResultCount + 1)
+        else
+            await this.redis.setAsync(`${flipResult.toLowerCase()}:count`, 1)
+
+        await ctx.reply(flipResult);
+    }
+
+    private async coinFlipStat(ctx: ContextMessageUpdate) {
+        const tailsCount = +(await this.redis.getAsync('tails:count'));
+        const headsCount = +(await this.redis.getAsync('heads:count'));
+
+        await ctx.reply(
+            `Tails - ${Math.round((tailsCount / (tailsCount + headsCount)) * 100)}%\nHeads - ${Math.round((headsCount / (tailsCount + headsCount)) * 100)}%`
+        );
+    }
+
+    private async bibaMetr(ctx: ContextMessageUpdate) {
+        await ctx.reply(`У @${ctx.message?.from?.username} биба ${Math.floor(Math.random() * (35 - 0 + 1) + 0)} см`);
     }
 
     private async roll(ctx: ContextMessageUpdate) {
