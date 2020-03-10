@@ -23,7 +23,7 @@ export class Queue {
             }
             case 'daily:checks': {
                 this.queue.process(async (job, done) => await BibaService.getInstance().dailyBiba(done));
-                await this.queue.add({}, { repeat: { cron: '* * * * *' }, removeOnComplete: true });
+                await this.queue.add({}, { repeat: { cron: '0 10 * * *' }, removeOnComplete: true });
                 break;
             }
         }
