@@ -40,12 +40,12 @@ export class Bot {
     }
 
     public applyListeners() {
-        this.listeners.forEach((listener) => this.app[listener.type](listener.name as MessageSubTypes, listener.callback))
+        this.listeners.forEach((listener) => this.app[listener.type](listener.name as MessageSubTypes, listener.callback));
     }
 
     public async handleError(err: Error) {
-        console.log('Error: ' + err.message);
-        await this.app.telegram.sendMessage(process.env.DEBUG_CHAT_ID as string, 'Error: ' + err.message)
+        console.log(JSON.stringify(err));
+        // await this.app.telegram.sendMessage(process.env.DEBUG_CHAT_ID as string, 'Error: ' + err.message)
     }
 
     private async initMain() {
