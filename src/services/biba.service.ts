@@ -7,7 +7,6 @@ enum BibaCommand {
     BIBA = 'biba',
     UNRANKED_BIBA = 'unbiba',
     BIBA_TABLE = 'biba_table',
-    DAILY_BIBA = 'daily_biba'
 }
 
 interface Biba {
@@ -66,7 +65,6 @@ export class BibaService {
             { type: BotCommandType.COMMAND, name: BibaCommand.BIBA, callback: (ctx) => this.bibaMetr(ctx) },
             { type: BotCommandType.COMMAND, name: BibaCommand.UNRANKED_BIBA, callback: (ctx) => this.unrankedBibaMetr(ctx) },
             { type: BotCommandType.COMMAND, name: BibaCommand.BIBA_TABLE, callback: (ctx) => this.bibaTable(ctx) },
-            { type: BotCommandType.COMMAND, name: BibaCommand.DAILY_BIBA, callback: (ctx) => this.dailyBiba(() => {}) },
         ]);
     }
 
