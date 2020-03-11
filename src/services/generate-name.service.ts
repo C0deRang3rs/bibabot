@@ -1,6 +1,5 @@
 import axios from 'axios';
 const Az = require('az');
-
 const SEX_QUERY = 'masc';
 
 export class GenerateNameService {
