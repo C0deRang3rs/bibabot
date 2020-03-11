@@ -1,7 +1,8 @@
-import { Bot, BotCommandType } from "../core/bot";
+import Bull from 'bull';
 import { ContextMessageUpdate } from "telegraf";
+
+import { Bot, BotCommandType } from "../core/bot";
 import { Redis, PromisifiedRedis } from "../core/redis";
-import Bull = require("bull");
 
 enum BibaCommand {
     BIBA = 'biba',
