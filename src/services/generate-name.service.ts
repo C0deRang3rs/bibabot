@@ -1,67 +1,52 @@
-import request from 'request-promise';
+import axios from 'axios';
 const Az = require('az');
+
+const SEX_QUERY = 'masc';
 
 export class GenerateNameService {
     private static instance: GenerateNameService;
 
-    private constructor() {}
+    private constructor() { }
 
     public static getInstance(): GenerateNameService {
-        if (!GenerateNameService.instance) 
+        if (!GenerateNameService.instance)
             GenerateNameService.instance = new GenerateNameService();
-            
+
         return GenerateNameService.instance;
     }
 
-    public async generateName() {
-        const words = await this.generateWords();
+    public async generateName(): Promise<string> {
+        let word1: string;
+        let word2: string;
+        let word3: string;
 
+        do {
+            word1 = await this.generateWord(1);
+        } while ((await this.checkSex(word1)) !== SEX_QUERY);
+
+        do {
+            word2 = await this.generateWord(2);
+        } while ((await this.checkSex(word2)) !== SEX_QUERY);
+
+        do {
+            word3 = await this.generateWord(2);
+        } while ((await this.checkSex(word3)) !== SEX_QUERY);
+
+        return `${word3} ${word2} ${word1}`;
+    }
+
+    private async checkSex(word: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                reject(new Error('Generate name timeout'));
-            }, 10000);
+            setTimeout(() => reject('Generate name timeout'), 10000);
 
             Az.Morph.init('node_modules/az/dicts', () => {
-                const wordMap = {
-                    'Nouns': {'neut': [], 'femn': [], 'masc': [],},
-                    'ADJF': {'neut': [], 'femn': [], 'masc': [],},
-                } as any;
-    
-                words.forEach(word => {
-                    const parse = Az.Morph(word)[0].tag.toString();
-                    ['masc', 'femn', 'neut'].forEach(sex => {
-                        if (parse.includes(sex) && parse.includes('NOUN')) {
-                            wordMap['Nouns'][sex].push(word);
-                        } else if (parse.includes(sex) && parse.includes('ADJF')) {
-                            wordMap['ADJF'][sex].push(word);
-                        }
-                    })
-                });
-    
-                ['masc', 'femn', 'neut'].forEach(sex => {
-                    if (wordMap['Nouns'][sex].length >= 1 && wordMap['ADJF'][sex].length >= 2) {
-                        const mapN = wordMap['Nouns'][sex];
-                        const mapA = wordMap['ADJF'][sex];
-                        resolve(`${mapA.pop()} ${mapA.pop()} ${mapN.pop()}`);
-                    }
-                });
+                resolve(Az.Morph(word)[0].tag.GNdr);
             });
         });
     }
 
-    private async generateWords() {
-        const tmp = [];
-
-        for (let i = 0; i < 10; i++) {
-            tmp.push(await this.getWord(1));
-            tmp.push(await this.getWord(2));
-        }
-
-        return tmp;
-    }
-
-    private async getWord(type: number) {
-        const response = await request.get({ url: `http://free-generator.ru/generator.php?action=word&type=${type}` })
-        return JSON.parse(response)['word']['word'];
+    private async generateWord(type: number): Promise<string> {
+        const response = await axios.get(`http://free-generator.ru/generator.php?action=word&type=${type}`);
+        return response.data.word.word;
     }
 }

@@ -12,8 +12,9 @@ enum BibaCommand {
 
 interface Biba {
     size: string;
-    time: string;
     username: string;
+    isBibaMeasuredToday: boolean;
+    outdated: boolean;
 }
 
 const POSITIVE_BIBA = 'Так держать!';
@@ -49,6 +50,11 @@ export class BibaService {
             if (!allBibasKeys.length) return this.bot.app.telegram.sendMessage(chat, message);
 
             await this.bot.app.telegram.sendMessage(chat, message);
+
+            for (const bibaKey of allBibasKeys) {
+                const lastBiba: Biba = JSON.parse(await this.redis.getAsync(bibaKey));
+                await this.redis.setAsync(bibaKey, JSON.stringify({ ...lastBiba, isBibaMeasuredToday: false, outdated: true }));
+            }
         }
 
         done();
@@ -67,15 +73,16 @@ export class BibaService {
         const biba = Math.floor(Math.random() * (35 + 1));
         let bibaMessage = `У @${ctx.message?.from?.username} биба ${biba} см`;
 
-        const lastBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx.message?.from?.id}`));
+        const lastBiba: Biba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx.message?.from?.id}`));
 
         if (lastBiba) {
-            if ((Math.abs(+new Date() - +new Date(lastBiba.time)) / 3600000) < +process.env.HOURS_BETWEEN_BIBAS!)
+            if (lastBiba.isBibaMeasuredToday)
                 return ctx.reply(MEASURED_BIBA);
-            bibaMessage = `У @${ctx.message?.from?.username} биба ${biba} см, в прошлый раз была ${lastBiba.size} см. ${biba - lastBiba.size > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA}`
+
+            bibaMessage = `У @${ctx.message?.from?.username} биба ${biba} см, в прошлый раз была ${lastBiba.size} см. ${biba - parseInt(lastBiba.size) > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA}`
         }
 
-        await this.redis.setAsync(`biba:${ctx.chat!.id}:${ctx.message?.from?.id}`, JSON.stringify({ size: biba, time: new Date().toISOString(), username: ctx.message?.from?.username }));
+        await this.redis.setAsync(`biba:${ctx.chat!.id}:${ctx.message?.from?.id}`, JSON.stringify({ size: biba, isBibaMeasuredToday: true, username: ctx.message?.from?.username, outdated: false }));
 
         await ctx.reply(bibaMessage);
     }
@@ -86,8 +93,12 @@ export class BibaService {
 
     private async bibaTable(ctx: ContextMessageUpdate) {
         const allBibasKeys: Array<string> = await this.redis.keysAsync(`biba:${ctx.chat!.id}:*`);
-        const allBibas: Array<Biba> = (await this.redis.mgetAsync(allBibasKeys)).map((rawBiba: string) => JSON.parse(rawBiba));
+
+        let allBibas: Array<Biba> = (await this.redis.mgetAsync(allBibasKeys)).map((rawBiba: string) => JSON.parse(rawBiba));
+        allBibas = allBibas.filter(biba => !biba.outdated);
         allBibas.sort((biba1, biba2) => (biba1.size < biba2.size) ? 1 : -1);
+
+        if (!allBibas.length) return ctx.reply('Никто не мерял бибу(((\n\nТы можешь померять бибу с помощью команды /biba');
 
         const message = allBibas.map((biba, index) => `${index + 1}. ${biba.username} - ${biba.size} см`);
 
@@ -95,10 +106,11 @@ export class BibaService {
     }
 
     private async getDailyMessage(allBibasKeys: Array<string>): Promise<string> {
-        if (!allBibasKeys.length) return 'Вчера никто не мерял бибу(((\n\nТы можешь померять бибу с помощью команды /biba';
-
-        const allBibas: Array<Biba> = (await this.redis.mgetAsync(allBibasKeys)).map((rawBiba: string) => JSON.parse(rawBiba));
+        let allBibas: Array<Biba> = (await this.redis.mgetAsync(allBibasKeys)).map((rawBiba: string) => JSON.parse(rawBiba));
+        allBibas = allBibas.filter(biba => !biba.outdated);
         allBibas.sort((biba1, biba2) => (biba1.size < biba2.size) ? 1 : -1);
+
+        if (!allBibas.length) return 'Вчера никто не мерял бибу(((\n\nТы можешь померять бибу с помощью команды /biba';
 
         const topBiba = allBibas[0];
         const lowBiba = allBibas.pop();
