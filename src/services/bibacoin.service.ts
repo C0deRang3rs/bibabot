@@ -74,8 +74,8 @@ export class BibacoinService {
 
     private getProductDescription(productName: string) {
         switch(productName) {
-            case 'BIBA_CM': return 'добавь 1 см к сегодняшней бибе';
-            case 'BIBA_REROLL': return 'испытай удачу ещё раз';
+            case BibacoinPrice[BibacoinPrice.BIBA_CM]: return 'добавь 1 см к сегодняшней бибе';
+            case BibacoinPrice[BibacoinPrice.BIBA_REROLL]: return 'испытай удачу ещё раз';
         }
     }
 
