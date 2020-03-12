@@ -41,6 +41,8 @@ export class BibaService {
         const chats = keys.map((key: string) => key.split(':')[2]);
 
         for (const chat of chats) {
+            console.log(`[${chat}] Daily biba`);
+
             const allBibasKeys: Array<string> = await this.redis.keysAsync(`biba:${chat}:*`);
 
             const message = await this.getDailyMessage(allBibasKeys);
