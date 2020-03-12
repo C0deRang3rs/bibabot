@@ -44,22 +44,22 @@ export class TrashService {
     private async trashHandler(ctx: ContextMessageUpdate) {
         if (!ctx.message || !ctx.message.text) return;
         
-        const msg = ctx.message!.text!.toLowerCase();
+        const msg = ctx.message.text.toLowerCase();
 
         if (FUCK_TRIGGERS.some(s=>msg.includes(s)))
-            await ctx.reply(`Сам иди нахуй`);
+            return ctx.reply(`Сам иди нахуй`);
         if (msg.includes('соси'))
-            await ctx.reply(`Сам соси!`);
+            return ctx.reply(`Сам соси!`);
         if (msg === 'да')
-            await ctx.reply(`пизда`);
+            return ctx.reply(`пизда`);
         if (msg === 'да.')
-            await ctx.reply(`пизда.`);
+            return ctx.reply(`пизда.`);
         if (msg === 'нет ты')
-            await ctx.reply(`Нет ты`);
+            return ctx.reply(`Нет ты`);
         if (msg.includes('один хуй'))
-            await ctx.reply(`Не "один хуй", а "однохуйственно". Учи рузкий блядь`);
+            return ctx.reply(`Не "один хуй", а "однохуйственно". Учи рузкий блядь`);
         if (msg === 'f') 
-            await ctx.replyWithPhoto({ source: fs.createReadStream(__dirname + '/../../assets/F.png') });
+            return ctx.replyWithPhoto({ source: fs.createReadStream(__dirname + '/../../assets/F.png') });
     }
 
     private async coinFlip(ctx: ContextMessageUpdate) {
@@ -97,8 +97,8 @@ export class TrashService {
         if (payload) {
             const parameters = payload.split('-');
 
-            let min = parseInt(parameters[0]);
-            let max = parseInt(parameters[1]);
+            const min = parseInt(parameters[0]);
+            const max = parseInt(parameters[1]);
 
             if (!min || !max) return ctx.reply('Wrong format');
 
