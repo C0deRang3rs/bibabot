@@ -7,7 +7,8 @@ export enum BotEvent {
 
 export enum BotCommandType {
     ON = 'on',
-    COMMAND = 'command'
+    COMMAND = 'command',
+    ACTION = 'action'
 }
 
 interface BotListener {
