@@ -55,7 +55,6 @@ export class ChangeTitleService {
         const objectedTimers: Record<string, string> = zipObject(ids, values);
 
         for (const id of Object.keys(objectedTimers)) {
-            console.log(`[${id}] Processing`);
             if ((Math.abs(+new Date() - +new Date(objectedTimers[id])) / this.iterationUnits) > this.iterationTime) {
                 console.log(`[${id}] Auto-rename`);
                 try {
@@ -65,7 +64,6 @@ export class ChangeTitleService {
                 }
                 await this.redis.setAsync(`auto:rename:${id}`, new Date().toISOString());
             } else {
-                console.log(`[${id}] Отказано нахуй`);
             }
         }
 
@@ -100,14 +98,12 @@ export class ChangeTitleService {
         await ctx.reply(`Ща как буду раз в ${this.iterationTime} ${this.unitsName} имена менять`);
         await this.changeTitle(ctx.chat.id);
         await this.redis.setAsync(`auto:rename:${ctx.chat.id.toString()}`, new Date().toISOString());
-        console.log(`[${ctx.chat.id}] Started`);
     }
 
     public async onStop(ctx: ContextMessageUpdate) {
         if (!ctx.chat) return;
 
         await this.redis.delAsync(`auto:rename:${ctx.chat.id.toString()}`);
-        console.log(`[${ctx.chat.id}] Stopped`);
         await ctx.reply('Всё, больше не буду');
     }
 
