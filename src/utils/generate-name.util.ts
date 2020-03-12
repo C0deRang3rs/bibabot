@@ -3,16 +3,16 @@ const Az = require('az');
 
 const SEX_QUERY = 'masc';
 
-export class GenerateNameService {
-    private static instance: GenerateNameService;
+export class GenerateNameUtil {
+    private static instance: GenerateNameUtil;
 
     private constructor() { }
 
-    public static getInstance(): GenerateNameService {
-        if (!GenerateNameService.instance)
-            GenerateNameService.instance = new GenerateNameService();
+    public static getInstance(): GenerateNameUtil {
+        if (!GenerateNameUtil.instance)
+            GenerateNameUtil.instance = new GenerateNameUtil();
 
-        return GenerateNameService.instance;
+        return GenerateNameUtil.instance;
     }
 
     public async generateName(): Promise<string> {

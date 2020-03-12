@@ -2,12 +2,7 @@ import { Bot, BotCommandType, BotEvent } from "../core/bot";
 import { ContextMessageUpdate } from "telegraf";
 import fs from 'fs';
 import { PromisifiedRedis, Redis } from "../core/redis";
-
-enum TrashCommand {
-    FLIP = 'flip',
-    ROLL = 'roll',
-    FLIP_STAT = 'flip_stat',
-}
+import { TrashCommand } from "../types/globals/commands.types";
 
 const FUCK_TRIGGERS = [
     'иди нахуй',

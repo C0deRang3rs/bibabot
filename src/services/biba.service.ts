@@ -3,12 +3,7 @@ import { ContextMessageUpdate } from "telegraf";
 
 import { Bot, BotCommandType } from "../core/bot";
 import { Redis, PromisifiedRedis } from "../core/redis";
-
-enum BibaCommand {
-    BIBA = 'biba',
-    UNRANKED_BIBA = 'unbiba',
-    BIBA_TABLE = 'biba_table',
-}
+import { BibaCommand } from '../types/globals/commands.types';
 
 interface Biba {
     size: string;
