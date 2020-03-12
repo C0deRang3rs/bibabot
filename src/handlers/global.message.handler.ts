@@ -13,7 +13,7 @@ export class GlobalMessageHandler {
 
     public static getInstance(): GlobalMessageHandler {
         if (!GlobalMessageHandler.instance)
-        GlobalMessageHandler.instance = new GlobalMessageHandler(Bot.getInstance());
+            GlobalMessageHandler.instance = new GlobalMessageHandler(Bot.getInstance());
         
         return GlobalMessageHandler.instance;
     }
