@@ -9,6 +9,12 @@ enum TrashCommand {
     FLIP_STAT = 'flip_stat',
 }
 
+const FUCK_TRIGGERS = [
+    'иди нахуй',
+    'пошёл нахуй',
+    'пошел нахуй'
+];
+
 export class TrashService {
     private static instance: TrashService;
 
@@ -38,12 +44,22 @@ export class TrashService {
     private async trashHandler(ctx: ContextMessageUpdate) {
         if (!ctx.message || !ctx.message.text) return;
         
-        if (ctx.message!.text!.toLowerCase().includes('один хуй'))
-            await ctx.reply(`Не "один хуй", а "однохуйственно". Учи рузкий блядь`);
-        if (ctx.message!.text!.toLowerCase().includes('иди нахуй'))
-            await ctx.reply(`Сам иди нахуй`);
-        if (ctx.message!.text!.toLowerCase() === 'f') 
-            await ctx.replyWithPhoto({ source: fs.createReadStream(__dirname + '/../../assets/F.png') });
+        const msg = ctx.message.text.toLowerCase();
+
+        if (FUCK_TRIGGERS.some(s=>msg.includes(s)))
+            return ctx.reply(`Сам иди нахуй`);
+        if (msg.includes('соси'))
+            return ctx.reply(`Сам соси!`);
+        if (msg === 'да')
+            return ctx.reply(`пизда`);
+        if (msg === 'да.')
+            return ctx.reply(`пизда.`);
+        if (msg === 'нет ты')
+            return ctx.reply(`Нет ты`);
+        if (msg.includes('один хуй'))
+            return ctx.reply(`Не "один хуй", а "однохуйственно". Учи рузкий блядь`);
+        if (msg === 'f') 
+            return ctx.replyWithPhoto({ source: fs.createReadStream(__dirname + '/../../assets/F.png') });
     }
 
     private async coinFlip(ctx: ContextMessageUpdate) {
@@ -81,10 +97,15 @@ export class TrashService {
         if (payload) {
             const parameters = payload.split('-');
 
-            if (!parameters[0] || !parameters[1]) return ctx.reply('Wrong format');
+            const min = parseInt(parameters[0]);
+            const max = parseInt(parameters[1]);
 
-            from = +parameters[0];
-            to = +parameters[1];
+            if (!min || !max) return ctx.reply('Wrong format');
+
+            if (!Number.isInteger(min) || !Number.isInteger(max)) return ctx.reply('Wrong data given');
+
+            from = min;
+            to = max;
         }
 
         await ctx.reply(Math.floor(Math.random() * (to - from + 1) + from).toString());
