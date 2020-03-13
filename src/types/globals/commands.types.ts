@@ -14,7 +14,7 @@ export enum BibaCommand {
 export enum BibacoinCommand {
     BALANCE = 'balance',
     BUY = 'buy',
-    LIST = 'list'
+    SHOP = 'shop'
 }
 
 export enum TrashCommand {
