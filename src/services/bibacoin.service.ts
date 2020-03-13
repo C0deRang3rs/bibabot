@@ -78,6 +78,7 @@ export class BibacoinService {
             await this.bibaService.bibaMetr(ctx, true);
 
             const balance = await this.newTransaction(ctx.from!.id, price);
+
             await ctx.answerCbQuery(`Реролл куплен! На счету осталось ${balance} коинов`);
 
         } catch (e) {
