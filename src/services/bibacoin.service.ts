@@ -57,7 +57,7 @@ export class BibacoinService {
 
         await this.redis.setAsync(`coin:${ctx.message?.from?.id}`, newBalance.toString());
 
-        next();
+        return next();
     }
 
     private async sendProductsList(ctx: ContextMessageUpdate) {
