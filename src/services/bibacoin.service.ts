@@ -50,13 +50,13 @@ export class BibacoinService {
     public async addMessageCoins(ctx: ContextMessageUpdate, next: any) {
         if (!ctx.message) return;
 
-        const currentBalance = (await this.redis.getAsync(`coin:${ctx.chat.id}:${ctx.message!.from!.id}`)) || 0;
+        const currentBalance = (await this.redis.getAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`)) || 0;
 
         const messagePrice = this.getPriceByMessage(ctx.message);
 
         const newBalance = parseFloat(currentBalance) + messagePrice;
 
-        await this.redis.setAsync(`coin:${ctx.chat.id}:${ctx.message!.from!.id}`, newBalance.toString());
+        await this.redis.setAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`, newBalance.toString());
 
         return next();
     }
@@ -74,11 +74,11 @@ export class BibacoinService {
     private async buyReroll(ctx: ContextMessageUpdate) {
         try {
             const price = this.getProductPrice(BibacoinProduct.BIBA_REROLL);
-            await this.hasEnoughCredits(ctx.from!.id, ctx.chat.id, price);
+            await this.hasEnoughCredits(ctx.from!.id, ctx.chat!.id, price);
             
             await this.bibaService.bibaMetr(ctx, true);
 
-            const balance = await this.newTransaction(ctx.from!.id, ctx.chat.id, price);
+            const balance = await this.newTransaction(ctx.from!.id, ctx.chat!.id, price);
 
             await ctx.answerCbQuery(`Реролл куплен! На счету осталось ${balance} коинов`);
 
@@ -92,7 +92,7 @@ export class BibacoinService {
     private async buyOneCM(ctx: ContextMessageUpdate) {
         try {
             const price = this.getProductPrice(BibacoinProduct.BIBA_CM);
-            await this.hasEnoughCredits(ctx.from!.id, ctx.chat.id, price);
+            await this.hasEnoughCredits(ctx.from!.id, ctx.chat!.id, price);
 
             const currentBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx?.from?.id}`));
 
@@ -102,7 +102,7 @@ export class BibacoinService {
 
             await this.redis.setAsync(`biba:${ctx.chat!.id}:${ctx.from!.id}`, JSON.stringify(currentBiba));
 
-            const balance = await this.newTransaction(ctx.from!.id, ctx.chat.id, price)
+            const balance = await this.newTransaction(ctx.from!.id, ctx.chat!.id, price)
             await ctx.answerCbQuery(`Биба увеличена на один см. Теперь ${currentBiba.size}см. На счету осталось ${balance} коинов`);
 
         } catch (e) {
@@ -133,7 +133,7 @@ export class BibacoinService {
     // --- SECTION [GETTERS] ------------------------------------------------------------------------------------------
 
     private async getBalance(ctx: ContextMessageUpdate) {
-        const balance = await this.redis.getAsync(`coin:${ctx.chat.id}:${ctx.message?.from?.id}`);
+        const balance = await this.redis.getAsync(`coin:${ctx.chat!.id}:${ctx.message?.from?.id}`);
         const message = balance ? `У тебя на счету ${balance} бибакоинов` : ZERO_BALANCE
         await ctx.reply(message);
     }
