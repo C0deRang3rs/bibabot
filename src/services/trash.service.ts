@@ -10,12 +10,6 @@ const FUCK_TRIGGERS = [
     'пошел нахуй'
 ];
 
-const FUCK_TRIGGERS = [
-    'иди нахуй',
-    'пошёл нахуй',
-    'пошел нахуй'
-];
-
 export class TrashService {
     private static instance: TrashService;
 
