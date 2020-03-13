@@ -8,7 +8,8 @@ import {
     ZERO_BALANCE,
     BibacoinPrice,
     BibacoinProductToActionMap,
-    BibacoinCredit
+    BibacoinCredit,
+    NO_BIBA_TO_BUY
 } from "../types/services/bibacoin.service.types";
 import { BibacoinCommand } from "../types/globals/commands.types";
 import { BibaService } from "./biba.service";
@@ -38,7 +39,7 @@ export class BibacoinService {
     private initListeners() {
         this.bot.addListeners([
             { type: BotCommandType.COMMAND, name: BibacoinCommand.BALANCE, callback: (ctx) => this.getBalance(ctx) },
-            { type: BotCommandType.COMMAND, name: BibacoinCommand.LIST, callback: (ctx) => this.sendProductsList(ctx) },
+            { type: BotCommandType.COMMAND, name: BibacoinCommand.SHOP, callback: (ctx) => this.sendProductsList(ctx) },
             { type: BotCommandType.ACTION, name: BibacoinAction.BUY_CM, callback: (ctx) => this.buyOneCM(ctx) },
             { type: BotCommandType.ACTION, name: BibacoinAction.BUY_REROLL, callback: (ctx) => this.buyReroll(ctx) },
         ]);
@@ -84,7 +85,7 @@ export class BibacoinService {
         } catch (e) {
             await ctx.answerCbQuery(e.message);
 
-            // throw e;
+            throw e;
         }
     }
 
@@ -94,6 +95,9 @@ export class BibacoinService {
             await this.hasEnoughCredits(ctx.from!.id, price);
 
             const currentBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx?.from?.id}`));
+
+            if (!currentBiba) return ctx.answerCbQuery(NO_BIBA_TO_BUY)
+
             currentBiba.size = currentBiba.size + 1;
 
             await this.redis.setAsync(`biba:${ctx.chat!.id}:${ctx.from!.id}`, JSON.stringify(currentBiba));
@@ -104,7 +108,7 @@ export class BibacoinService {
         } catch (e) {
             await ctx.answerCbQuery(e.message);
 
-            // throw e;
+            throw e;
         }
     }
 
