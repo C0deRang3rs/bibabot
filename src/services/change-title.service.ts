@@ -1,16 +1,10 @@
 import { ContextMessageUpdate } from "telegraf";
-import { GenerateNameService } from '../services/generate-name.service';
+import { GenerateNameUtil } from '../utils/generate-name.util';
 import zipObject from 'lodash.zipobject';
 import { Bot, BotCommandType } from "../core/bot";
 import { Redis, PromisifiedRedis } from "../core/redis";
 import Bull from "bull";
-
-export enum ChangeTitleCommandType {
-    START = 'start',
-    STOP = 'stop',
-    RENAME = 'rename',
-    ITERATION_CHANGE = 'iteration_change'
-}
+import { ChangeTitleCommandType } from "../types/globals/commands.types";
 
 enum TimerUnits {
     MINUTES = 60000,
@@ -55,7 +49,6 @@ export class ChangeTitleService {
         const objectedTimers: Record<string, string> = zipObject(ids, values);
 
         for (const id of Object.keys(objectedTimers)) {
-            console.log(`[${id}] Processing`);
             if ((Math.abs(+new Date() - +new Date(objectedTimers[id])) / this.iterationUnits) > this.iterationTime) {
                 console.log(`[${id}] Auto-rename`);
                 try {
@@ -65,7 +58,6 @@ export class ChangeTitleService {
                 }
                 await this.redis.setAsync(`auto:rename:${id}`, new Date().toISOString());
             } else {
-                console.log(`[${id}] Отказано нахуй`);
             }
         }
 
@@ -100,14 +92,12 @@ export class ChangeTitleService {
         await ctx.reply(`Ща как буду раз в ${this.iterationTime} ${this.unitsName} имена менять`);
         await this.changeTitle(ctx.chat.id);
         await this.redis.setAsync(`auto:rename:${ctx.chat.id.toString()}`, new Date().toISOString());
-        console.log(`[${ctx.chat.id}] Started`);
     }
 
     public async onStop(ctx: ContextMessageUpdate) {
         if (!ctx.chat) return;
 
         await this.redis.delAsync(`auto:rename:${ctx.chat.id.toString()}`);
-        console.log(`[${ctx.chat.id}] Stopped`);
         await ctx.reply('Всё, больше не буду');
     }
 
@@ -128,7 +118,7 @@ export class ChangeTitleService {
     }
 
     private async changeTitle(id: number) {
-        const newName = await GenerateNameService.getInstance().generateName();
+        const newName = await GenerateNameUtil.getInstance().generateName();
         console.log(`[${id}] New name: ${newName}`);
         await (this.bot.app.telegram as any).setChatTitle(id, newName);
     }

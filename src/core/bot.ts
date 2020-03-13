@@ -1,4 +1,4 @@
-import Telegraf, { ContextMessageUpdate,  } from 'telegraf';
+import Telegraf, { ContextMessageUpdate, } from 'telegraf';
 import { MessageSubTypes } from 'telegraf/typings/telegram-types';
 
 export enum BotEvent {
@@ -7,7 +7,8 @@ export enum BotEvent {
 
 export enum BotCommandType {
     ON = 'on',
-    COMMAND = 'command'
+    COMMAND = 'command',
+    ACTION = 'action'
 }
 
 interface BotListener {
@@ -40,11 +41,27 @@ export class Bot {
     }
 
     public applyListeners() {
-        this.listeners.forEach((listener) => this.app[listener.type](listener.name as MessageSubTypes, listener.callback));
+        this.listeners.forEach((listener) =>
+            this.app[listener.type](
+                listener.name as MessageSubTypes,
+                (ctx, next) => this.logger(ctx, next, listener.name),
+                listener.callback
+            )
+        );
+    }
+
+    private logger(ctx: ContextMessageUpdate, next: any, commandName: string) {
+        const user = ctx.message && ctx.message!.from || ctx.from!;
+        const message = ctx.message && ctx.message!.text || ctx.match;
+
+        if (commandName !== BotEvent.MESSAGE)
+        console.log(`[${ctx.chat?.id}] ${ctx.chat?.title} from user @${user.username} - ${message}`);
+
+        return next();
     }
 
     public async handleError(err: Error) {
-        console.log(JSON.stringify(err));
+        console.error(err);
         // await this.app.telegram.sendMessage(process.env.DEBUG_CHAT_ID as string, 'Error: ' + err.message)
     }
 
