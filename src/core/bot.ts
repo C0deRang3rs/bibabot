@@ -55,13 +55,13 @@ export class Bot {
         const message = ctx.message && ctx.message!.text || ctx.match;
 
         if (commandName !== BotEvent.MESSAGE)
-            console.log(`[${ctx.chat?.id}] ${ctx.chat?.title} from user @${user.username} - ${message}`);
+        console.log(`[${ctx.chat?.id}] ${ctx.chat?.title} from user @${user.username} - ${message}`);
 
-        next();
+        return next();
     }
 
     public async handleError(err: Error) {
-        console.error(JSON.stringify(err));
+        console.error(err);
         // await this.app.telegram.sendMessage(process.env.DEBUG_CHAT_ID as string, 'Error: ' + err.message)
     }
 
