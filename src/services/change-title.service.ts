@@ -1,16 +1,10 @@
 import { ContextMessageUpdate } from "telegraf";
-import { GenerateNameService } from '../services/generate-name.service';
+import { GenerateNameUtil } from '../utils/generate-name.util';
 import zipObject from 'lodash.zipobject';
 import { Bot, BotCommandType } from "../core/bot";
 import { Redis, PromisifiedRedis } from "../core/redis";
 import Bull from "bull";
-
-export enum ChangeTitleCommandType {
-    START = 'start',
-    STOP = 'stop',
-    RENAME = 'rename',
-    ITERATION_CHANGE = 'iteration_change'
-}
+import { ChangeTitleCommandType } from "../types/globals/commands.types";
 
 enum TimerUnits {
     MINUTES = 60000,
@@ -124,7 +118,7 @@ export class ChangeTitleService {
     }
 
     private async changeTitle(id: number) {
-        const newName = await GenerateNameService.getInstance().generateName();
+        const newName = await GenerateNameUtil.getInstance().generateName();
         console.log(`[${id}] New name: ${newName}`);
         await (this.bot.app.telegram as any).setChatTitle(id, newName);
     }

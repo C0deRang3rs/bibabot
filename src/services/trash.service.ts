@@ -2,12 +2,7 @@ import { Bot, BotCommandType, BotEvent } from "../core/bot";
 import { ContextMessageUpdate } from "telegraf";
 import fs from 'fs';
 import { PromisifiedRedis, Redis } from "../core/redis";
-
-enum TrashCommand {
-    FLIP = 'flip',
-    ROLL = 'roll',
-    FLIP_STAT = 'flip_stat',
-}
+import { TrashCommand } from "../types/globals/commands.types";
 
 const FUCK_TRIGGERS = [
     'иди нахуй',
@@ -37,11 +32,10 @@ export class TrashService {
             { type: BotCommandType.COMMAND, name: TrashCommand.FLIP, callback: (ctx) => this.coinFlip(ctx) },
             { type: BotCommandType.COMMAND, name: TrashCommand.ROLL, callback: (ctx) => this.roll(ctx) },
             { type: BotCommandType.COMMAND, name: TrashCommand.FLIP_STAT, callback: (ctx) => this.coinFlipStat(ctx) },
-            { type: BotCommandType.ON, name: BotEvent.MESSAGE, callback: (ctx) => this.trashHandler(ctx) },
         ]);
     }
 
-    private async trashHandler(ctx: ContextMessageUpdate) {
+    public async trashHandler(ctx: ContextMessageUpdate, next: any) {
         if (!ctx.message || !ctx.message.text) return;
         
         const msg = ctx.message.text.toLowerCase();
@@ -60,6 +54,8 @@ export class TrashService {
             return ctx.reply(`Не "один хуй", а "однохуйственно". Учи рузкий блядь`);
         if (msg === 'f') 
             return ctx.replyWithPhoto({ source: fs.createReadStream(__dirname + '/../../assets/F.png') });
+
+        next();
     }
 
     private async coinFlip(ctx: ContextMessageUpdate) {
