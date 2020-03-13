@@ -72,10 +72,13 @@ export class BibacoinService {
 
     private async buyReroll(ctx: ContextMessageUpdate) {
         try {
-            this.hasEnoughCredits(ctx!.from!.id, this.getProductPrice(BibacoinProduct.BIBA_REROLL));
-            await this.bibaService.bibaMetr(ctx, true);
+            const price = this.getProductPrice(BibacoinProduct.BIBA_REROLL);
+            await this.hasEnoughCredits(ctx.from!.id, price);
             
-            const balance = await this.newTransaction(ctx.from!.id, this.getProductPrice(BibacoinProduct.BIBA_REROLL));
+            await this.bibaService.bibaMetr(ctx, true);
+
+            const balance = await this.newTransaction(ctx.from!.id, price);
+
             await ctx.answerCbQuery(`Реролл куплен! На счету осталось ${balance} коинов`);
 
         } catch (e) {
@@ -87,14 +90,15 @@ export class BibacoinService {
 
     private async buyOneCM(ctx: ContextMessageUpdate) {
         try {
-            this.hasEnoughCredits(ctx!.from!.id, this.getProductPrice(BibacoinProduct.BIBA_CM));
+            const price = this.getProductPrice(BibacoinProduct.BIBA_CM);
+            await this.hasEnoughCredits(ctx.from!.id, price);
 
             const currentBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx?.from?.id}`));
             currentBiba.size = currentBiba.size + 1;
 
             await this.redis.setAsync(`biba:${ctx.chat!.id}:${ctx.from!.id}`, JSON.stringify(currentBiba));
 
-            const balance = await this.newTransaction(ctx.from!.id, this.getProductPrice(BibacoinProduct.BIBA_CM))
+            const balance = await this.newTransaction(ctx.from!.id, price)
             await ctx.answerCbQuery(`Биба увеличена на один см. Теперь ${currentBiba.size}см. На счету осталось ${balance} коинов`);
 
         } catch (e) {
