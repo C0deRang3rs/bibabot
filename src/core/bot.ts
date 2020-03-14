@@ -11,7 +11,7 @@ export enum BotCommandType {
     ACTION = 'action'
 }
 
-interface BotListener {
+export interface BotListener {
     type: BotCommandType;
     name: MessageSubTypes | string;
     callback(ctx: ContextMessageUpdate): void;

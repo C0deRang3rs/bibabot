@@ -1,4 +1,4 @@
-import { Bot, BotCommandType } from "../core/bot";
+import { Bot, BotCommandType, BotListener } from "../core/bot";
 import { ContextMessageUpdate, Markup } from "telegraf";
 import { PromisifiedRedis, Redis } from "../core/redis";
 import {
@@ -6,11 +6,19 @@ import {
     BibacoinProduct,
     ZERO_BALANCE,
     NO_BIBA_TO_BUY,
-    BibacoinActivity
+    BibacoinActivity,
+    NO_BIBA_TO_REROLL
 } from "../types/services/bibacoin.service.types";
 import { BibacoinCommand } from "../types/globals/commands.types";
 import { BibaService } from "./biba.service";
-import { getPriceByMessage, getProductsList, getProductPrice, getActionByProduct, getPriceByActivity, getActivitiesList } from "../utils/shop.helper";
+import {
+    getPriceByMessage,
+    getProductsList,
+    getProductPrice,
+    getActionByProduct,
+    getPriceByActivity,
+    getActivitiesList
+} from "../utils/shop.helper";
 
 export class BibacoinService {
     private static instance: BibacoinService;
@@ -35,13 +43,21 @@ export class BibacoinService {
     }
 
     private initListeners() {
-        this.bot.addListeners([
+        const commands: BotListener[] = [
             { type: BotCommandType.COMMAND, name: BibacoinCommand.BALANCE, callback: (ctx) => this.getBalance(ctx) },
             { type: BotCommandType.COMMAND, name: BibacoinCommand.SHOP, callback: (ctx) => this.sendProductsList(ctx) },
             { type: BotCommandType.COMMAND, name: BibacoinCommand.INCOME_LIST, callback: (ctx) => this.sendIncomeList(ctx) },
             { type: BotCommandType.ACTION, name: BibacoinAction.BUY_CM, callback: (ctx) => this.buyOneCM(ctx) },
             { type: BotCommandType.ACTION, name: BibacoinAction.BUY_REROLL, callback: (ctx) => this.buyReroll(ctx) },
-        ]);
+        ];
+
+        if (process.env.PRODUCTION === 'false') {
+            commands.push(
+                { type: BotCommandType.COMMAND, name: BibacoinCommand.SET_BALANCE, callback: (ctx) => this.setBalance(ctx) }
+            );
+        }
+
+        this.bot.addListeners(commands);
     }
 
     // --- SECTION [HANDLERS] -----------------------------------------------------------------------------------------
@@ -58,6 +74,15 @@ export class BibacoinService {
         await this.redis.setAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`, newBalance.toString());
 
         return next();
+    }
+
+    private async setBalance(ctx: ContextMessageUpdate) {
+        const balance = ctx.message!.text!.split(BibacoinCommand.SET_BALANCE)[1].trim();
+
+        if (!balance) return ctx.reply('Укажи сколько надо');
+
+        await this.redis.setAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`, balance!.toString())
+        await ctx.reply('Done');
     }
 
     private async sendProductsList(ctx: ContextMessageUpdate) {
@@ -83,6 +108,10 @@ export class BibacoinService {
             const price = getProductPrice(BibacoinProduct.BIBA_REROLL);
             await this.hasEnoughCredits(ctx.from!.id, ctx.chat!.id, price);
 
+            const currentBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx?.from?.id}`));
+
+            if (!currentBiba) return ctx.answerCbQuery(NO_BIBA_TO_REROLL)
+            
             await this.bibaService.bibaMetr(ctx, true);
 
             const balance = await this.newTransaction(ctx.from!.id, ctx.chat!.id, price);
