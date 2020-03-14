@@ -150,7 +150,7 @@ export class BibacoinService {
 
         switch (activity) {
             case BibacoinActivity.MESSAGE: message = 'Сообщение'; break;
-            case BibacoinActivity.PHOTO: message = 'Мемас'; break;
+            case BibacoinActivity.PHOTO: message = 'Картинка'; break;
             case BibacoinActivity.STICKER: message = 'Стикер'; break;
             case BibacoinActivity.VIDEO: message = 'Видос'; break;
             case BibacoinActivity.VOICE: message = 'Войс'; break;
