@@ -55,7 +55,7 @@ export class Bot {
         const message = ctx.message && ctx.message!.text || ctx.match;
 
         if (commandName !== BotEvent.MESSAGE)
-        console.log(`[${ctx.chat?.id}] ${ctx.chat?.title} from user @${user.username} - ${message}`);
+        console.log(`[${ctx.chat!.id}] ${ctx.chat!.title} from user @${user.username} - ${message}`);
 
         return next();
     }

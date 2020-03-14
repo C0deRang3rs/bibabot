@@ -4,7 +4,7 @@ import { ContextMessageUpdate, Markup } from "telegraf";
 import { Bot, BotCommandType } from "../core/bot";
 import { Redis, PromisifiedRedis } from "../core/redis";
 import { BibaCommand } from '../types/globals/commands.types';
-import { BibacoinProduct, BibacoinAction, BibacoinPrice } from '../types/services/bibacoin.service.types';
+import { BibacoinAction, BibacoinPrice } from '../types/services/bibacoin.service.types';
 
 interface Biba {
     size: string;
@@ -14,7 +14,6 @@ interface Biba {
 
 const POSITIVE_BIBA = 'Так держать!';
 const NEGATIVE_BIBA = 'Чет ты спустил малясь...';
-const MEASURED_BIBA = 'Ты сегодня уже мерял бибу, приходи завтра';
 const NO_TABLE_DATA = 'Никто не мерял бибу(((\n\nТы можешь померять бибу с помощью команды /biba';
 
 export class BibaService {
@@ -67,7 +66,7 @@ export class BibaService {
     }
 
     public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean) {
-        const user = ctx.message && ctx.message?.from || ctx.from;
+        const user = ctx.message && ctx.message!.from || ctx.from;
 
         const biba = Math.floor(Math.random() * (35 + 1));
         let bibaMessage = `У @${user!.username} биба ${biba} см`;
@@ -92,7 +91,7 @@ export class BibaService {
     }
 
     private async unrankedBibaMetr(ctx: ContextMessageUpdate) {
-        await ctx.reply(`У @${ctx.message?.from?.username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
+        await ctx.reply(`У @${ctx.message!.from!.username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
     }
 
     private async bibaTable(ctx: ContextMessageUpdate) {
@@ -122,6 +121,6 @@ export class BibaService {
         const topBiba = allBibas[0];
         const lowBiba = allBibas.pop();
 
-        return `👑 Королевская биба сегодня у @${topBiba.username} - ${topBiba.size} см\n\n👌 Обсосом дня становится @${lowBiba?.username} - ${lowBiba?.size} см`;
+        return `👑 Королевская биба сегодня у @${topBiba.username} - ${topBiba.size} см\n\n👌 Обсосом дня становится @${lowBiba!.username} - ${lowBiba!.size} см`;
     }
 }

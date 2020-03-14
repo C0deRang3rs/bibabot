@@ -75,7 +75,7 @@ export class BibacoinService {
         try {
             const price = this.getProductPrice(BibacoinProduct.BIBA_REROLL);
             await this.hasEnoughCredits(ctx.from!.id, ctx.chat!.id, price);
-            
+
             await this.bibaService.bibaMetr(ctx, true);
 
             const balance = await this.newTransaction(ctx.from!.id, ctx.chat!.id, price);
@@ -94,15 +94,15 @@ export class BibacoinService {
             const price = this.getProductPrice(BibacoinProduct.BIBA_CM);
             await this.hasEnoughCredits(ctx.from!.id, ctx.chat!.id, price);
 
-            const currentBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx?.from?.id}`));
+            const currentBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx!.from!.id}`));
 
-            if (!currentBiba) return ctx.answerCbQuery(NO_BIBA_TO_BUY)
+            if (!currentBiba) return ctx.answerCbQuery(NO_BIBA_TO_BUY);
 
             currentBiba.size = currentBiba.size + 1;
 
             await this.redis.setAsync(`biba:${ctx.chat!.id}:${ctx.from!.id}`, JSON.stringify(currentBiba));
 
-            const balance = await this.newTransaction(ctx.from!.id, ctx.chat!.id, price)
+            const balance = await this.newTransaction(ctx.from!.id, ctx.chat!.id, price);
             await ctx.answerCbQuery(`Биба увеличена на один см. Теперь ${currentBiba.size}см. На счету осталось ${balance} коинов`);
 
         } catch (e) {
@@ -133,8 +133,8 @@ export class BibacoinService {
     // --- SECTION [GETTERS] ------------------------------------------------------------------------------------------
 
     private async getBalance(ctx: ContextMessageUpdate) {
-        const balance = await this.redis.getAsync(`coin:${ctx.chat!.id}:${ctx.message?.from?.id}`);
-        const message = balance ? `У тебя на счету ${balance} бибакоинов` : ZERO_BALANCE
+        const balance = await this.redis.getAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`);
+        const message = balance ? `У тебя на счету ${balance} бибакоинов` : ZERO_BALANCE;
         await ctx.reply(message);
     }
 
