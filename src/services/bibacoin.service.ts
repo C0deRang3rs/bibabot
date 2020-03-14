@@ -47,7 +47,7 @@ export class BibacoinService {
 
     // --- SECTION [HANDLERS] -----------------------------------------------------------------------------------------
 
-    public async addMessageCoins(ctx: ContextMessageUpdate, next: any) {
+    public addMessageCoins = async (ctx: ContextMessageUpdate, next: any) => {
         if (!ctx.message) return;
 
         const currentBalance = (await this.redis.getAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`)) || 0;
