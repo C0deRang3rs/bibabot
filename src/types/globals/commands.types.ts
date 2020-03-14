@@ -2,7 +2,7 @@ export enum ChangeTitleCommandType {
     START = 'start',
     STOP = 'stop',
     RENAME = 'rename',
-    ITERATION_CHANGE = 'iteration_change'
+    ITERATION_CHANGE = 'iteration_change',
 }
 
 export enum BibaCommand {
@@ -14,7 +14,8 @@ export enum BibaCommand {
 export enum BibacoinCommand {
     BALANCE = 'balance',
     BUY = 'buy',
-    SHOP = 'shop'
+    SHOP = 'shop',
+    INCOME_LIST = 'income_list',
 }
 
 export enum TrashCommand {

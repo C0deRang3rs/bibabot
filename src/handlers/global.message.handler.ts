@@ -21,7 +21,7 @@ export class GlobalMessageHandler {
     public initListeners() {
         this.bot.app.on(
             BotEvent.MESSAGE,
-            (ctx, next) => BibacoinService.getInstance().addMessageCoins(ctx, next),
+            BibacoinService.getInstance().addMessageCoins,
             TrashService.getInstance().trashHandler
         );
     }
