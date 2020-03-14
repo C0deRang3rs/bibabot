@@ -4,7 +4,8 @@ import { ContextMessageUpdate, Markup } from "telegraf";
 import { Bot, BotCommandType } from "../core/bot";
 import { Redis, PromisifiedRedis } from "../core/redis";
 import { BibaCommand } from '../types/globals/commands.types';
-import { BibacoinProduct, BibacoinAction, BibacoinPrice } from '../types/services/bibacoin.service.types';
+import { BibacoinProduct } from '../types/services/bibacoin.service.types';
+import { getProductPrice, getActionByProduct } from '../utils/shop.helper';
 
 interface Biba {
     size: string;
@@ -76,9 +77,10 @@ export class BibaService {
 
         if (lastBiba) {
             if (!lastBiba.outdated && !forceReroll) {
-                return ctx.reply('Ты сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за 100 бибакоинов',
+                const price = getProductPrice(BibacoinProduct.BIBA_REROLL);
+                return ctx.reply(`Ты сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
                     Markup.inlineKeyboard(
-                        [Markup.callbackButton(`Перемерять бибу 💰${BibacoinPrice.biba_reroll}¢`, BibacoinAction.BUY_REROLL)]
+                        [Markup.callbackButton(`Перемерять бибу 💰${price}¢`, getActionByProduct(BibacoinProduct.BIBA_REROLL))]
                     ).extra()
                 );
             }
