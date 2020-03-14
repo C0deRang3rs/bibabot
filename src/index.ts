@@ -24,4 +24,4 @@ BibaService.getInstance();
 TrashService.getInstance();
 BibacoinService.getInstance();
 Bot.getInstance().applyListeners();
-GlobalMessageHandler.getInstance()
+GlobalMessageHandler.getInstance();

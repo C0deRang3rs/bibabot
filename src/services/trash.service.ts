@@ -1,4 +1,4 @@
-import { Bot, BotCommandType, BotEvent } from "../core/bot";
+import { Bot, BotCommandType } from "../core/bot";
 import { ContextMessageUpdate } from "telegraf";
 import fs from 'fs';
 import { PromisifiedRedis, Redis } from "../core/redis";
@@ -54,6 +54,8 @@ export class TrashService {
             return ctx.reply(`Не "один хуй", а "однохуйственно". Учи рузкий блядь`);
         if (msg === 'f')
             return ctx.replyWithPhoto({ source: fs.createReadStream(__dirname + '/../../assets/F.png') });
+        if (msg === 'нет')
+            return ctx.reply('говна пакет');
 
         return next();
     }
@@ -66,9 +68,9 @@ export class TrashService {
         const currentResultCount = await this.redis.getAsync(`${flipResult.toLowerCase()}:count`);
 
         if (currentResultCount)
-            await this.redis.setAsync(`${flipResult.toLowerCase()}:count`, +currentResultCount + 1)
+            await this.redis.setAsync(`${flipResult.toLowerCase()}:count`, +currentResultCount + 1);
         else
-            await this.redis.setAsync(`${flipResult.toLowerCase()}:count`, 1)
+            await this.redis.setAsync(`${flipResult.toLowerCase()}:count`, 1);
 
         await ctx.reply(flipResult);
     }
