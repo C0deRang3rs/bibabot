@@ -36,3 +36,4 @@ export const BibacoinProductToActionMap: Record<BibacoinProduct, BibacoinAction>
 
 export const ZERO_BALANCE = 'Пока что у тебя нет бибакоинов, ты можешь получить их за любую активность в чате';
 export const NO_BIBA_TO_BUY = 'У тебя нет бибы, так что увеличивать нечего';
+export const NO_BIBA_TO_REROLL = 'У тебя нет бибы, так что измерять нечего';
