@@ -9,7 +9,7 @@ import { GlobalMessageHandler } from "./handlers/global.message.handler";
 import { BibacoinService } from "./services/bibacoin.service";
 
 if (process.env.CLOUD !== 'true') {
-    require('dotenv').config();
+	require('dotenv').config();
 }
 
 // CORE
