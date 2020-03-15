@@ -1,28 +1,28 @@
-import { Bot, BotEvent } from "../core/bot";
-import { BibacoinService } from "../services/bibacoin.service";
-import { TrashService } from "../services/trash.service";
+import BibacoinService from '../services/bibacoin.service';
+import TrashService from '../services/trash.service';
+import { BotEvent } from '../types/core/bot.types';
+import Bot from '../core/bot';
 
-export class GlobalMessageHandler {
-	private static instance: GlobalMessageHandler;
+export default class GlobalMessageHandler {
+  private static instance: GlobalMessageHandler;
 
-	private constructor(
-		private readonly bot: Bot,
-	) {
-		this.initListeners();
-	}
+  private constructor(
+    private readonly bot: Bot,
+  ) {
+    this.initListeners();
+  }
 
-	public static getInstance(): GlobalMessageHandler {
-		if (!GlobalMessageHandler.instance)
-			GlobalMessageHandler.instance = new GlobalMessageHandler(Bot.getInstance());
+  public static getInstance(): GlobalMessageHandler {
+    if (!GlobalMessageHandler.instance) GlobalMessageHandler.instance = new GlobalMessageHandler(Bot.getInstance());
 
-		return GlobalMessageHandler.instance;
-	}
+    return GlobalMessageHandler.instance;
+  }
 
-	public initListeners() {
-		this.bot.app.on(
-			BotEvent.MESSAGE,
-			BibacoinService.getInstance().addMessageCoins,
-			TrashService.getInstance().trashHandler
-		);
-	}
+  public initListeners(): void {
+    this.bot.app.on(
+      BotEvent.MESSAGE,
+      BibacoinService.getInstance().addMessageCoins,
+      TrashService.trashHandler,
+    );
+  }
 }
