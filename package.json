@@ -6,17 +6,12 @@
   "scripts": {
     "start": "node dist/index.js",
     "postinstall": "tsc",
-    "watch": "tsc-watch --onSuccess 'node dist/index.js'"
+    "watch": "tsc-watch --onSuccess 'node dist/index.js'",
+    "lint": "./node_modules/.bin/eslint --ext .ts ./ --fix"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@types/bluebird": "3.5.30",
-    "@types/bull": "3.10.6",
-    "@types/express": "4.17.2",
-    "@types/lodash.zipobject": "4.1.6",
-    "@types/node": "13.1.6",
-    "@types/redis": "2.8.14",
     "axios": "0.19.2",
     "az": "0.2.3",
     "bluebird": "3.7.2",
@@ -28,5 +23,18 @@
     "telegraf": "3.33.3",
     "tsc-watch": "4.0.0",
     "typescript": "3.7.2"
+  },
+  "devDependencies": {
+    "@types/bluebird": "3.5.30",
+    "@types/bull": "3.10.6",
+    "@types/express": "4.17.2",
+    "@types/lodash.zipobject": "4.1.6",
+    "@types/node": "13.1.6",
+    "@types/redis": "2.8.14",
+    "@typescript-eslint/eslint-plugin": "2.23.0",
+    "@typescript-eslint/parser": "2.23.0",
+    "eslint": "6.8.0",
+    "eslint-config-airbnb-typescript": "7.0.0",
+    "eslint-plugin-import": "2.20.1"
   }
 }

@@ -1,16 +1,17 @@
-import { Bot } from "./core/bot";
-import { Server } from "./core/server";
-import { Queue } from "./core/queue";
-import { TrashService } from "./services/trash.service";
-import { ChangeTitleService } from "./services/change-title.service";
-import { Redis } from "./core/redis";
-import { BibaService } from "./services/biba.service";
-import { GlobalMessageHandler } from "./handlers/global.message.handler";
-import { BibacoinService } from "./services/bibacoin.service";
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable global-require */
+import { config } from 'dotenv';
+import { Bot } from './core/bot';
+import Server from './core/server';
+import Queue from './core/queue';
+import TrashService from './services/trash.service';
+import ChangeTitleService from './services/change-title.service';
+import { Redis } from './core/redis';
+import BibaService from './services/biba.service';
+import GlobalMessageHandler from './handlers/global.message.handler';
+import BibacoinService from './services/bibacoin.service';
 
-if (process.env.CLOUD !== 'true') {
-	require('dotenv').config();
-}
+if (process.env.CLOUD !== 'true') config();
 
 // CORE
 Redis.getInstance();

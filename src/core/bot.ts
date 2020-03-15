@@ -1,80 +1,86 @@
-import Telegraf, { ContextMessageUpdate, } from 'telegraf';
+import Telegraf, { ContextMessageUpdate, Telegram } from 'telegraf';
 import { MessageSubTypes } from 'telegraf/typings/telegram-types';
 
 export enum BotEvent {
-	MESSAGE = 'message'
+  MESSAGE = 'message'
 }
 
 export enum BotCommandType {
-	ON = 'on',
-	COMMAND = 'command',
-	ACTION = 'action'
+  ON = 'on',
+  COMMAND = 'command',
+  ACTION = 'action'
 }
 
 export interface BotListener {
-	type: BotCommandType;
-	name: MessageSubTypes | string;
-	callback(ctx: ContextMessageUpdate): void;
+  type: BotCommandType;
+  name: MessageSubTypes | string;
+  callback(ctx: ContextMessageUpdate): void;
+}
+
+export interface TelegramFull extends Telegram {
+  setChatTitle(id: number, name: string): Promise<void>;
+}
+
+export interface TelegrafFull extends Telegraf<ContextMessageUpdate> {
+  telegram: TelegramFull;
 }
 
 export class Bot {
-	private static instance: Bot;
-	private listeners: Array<BotListener> = [];
+  private static instance: Bot;
+  public app!: TelegrafFull;
+  private listeners: Array<BotListener> = [];
 
-	public app!: Telegraf<ContextMessageUpdate>;
+  private constructor() {
+    this.initMain();
+    this.initHandlers();
+    this.startPooling();
+  }
 
-	private constructor() {
-		this.initMain();
-		this.initHandlers();
-		this.startPooling();
-	}
+  public static getInstance(): Bot {
+    if (!Bot.instance) {
+      Bot.instance = new Bot();
+    }
 
-	public static getInstance(): Bot {
-		if (!Bot.instance)
-			Bot.instance = new Bot();
+    return Bot.instance;
+  }
 
-		return Bot.instance;
-	}
+  public static handleError(err: Error): void {
+    console.error(err);
+  }
 
-	public addListeners(list: Array<BotListener>) {
-		this.listeners = [...this.listeners, ...list];
-	}
+  private static logger(ctx: ContextMessageUpdate, next: Function, commandName: string): Function {
+    const user = (ctx.message && ctx.message!.from) || ctx.from!;
+    const message = (ctx.message && ctx.message!.text) || ctx.match;
 
-	public applyListeners() {
-		this.listeners.forEach((listener) =>
-			this.app[listener.type](
-				listener.name as MessageSubTypes,
-				(ctx, next) => this.logger(ctx, next, listener.name),
-				listener.callback
-			)
-		);
-	}
+    if (commandName !== BotEvent.MESSAGE) {
+      console.log(`[${ctx.chat!.id}] ${ctx.chat!.title} from user @${user.username} - ${message}`);
+    }
 
-	private logger(ctx: ContextMessageUpdate, next: any, commandName: string) {
-		const user = ctx.message && ctx.message!.from || ctx.from!;
-		const message = ctx.message && ctx.message!.text || ctx.match;
+    return next();
+  }
 
-		if (commandName !== BotEvent.MESSAGE)
-			console.log(`[${ctx.chat!.id}] ${ctx.chat!.title} from user @${user.username} - ${message}`);
+  public addListeners(list: Array<BotListener>): void {
+    this.listeners = [...this.listeners, ...list];
+  }
 
-		return next();
-	}
+  public applyListeners(): void {
+    this.listeners.forEach((listener) => this.app[listener.type](
+      listener.name as MessageSubTypes,
+      (ctx, next) => Bot.logger(ctx, next as Function, listener.name),
+      listener.callback,
+    ));
+  }
 
-	public async handleError(err: Error) {
-		console.error(err);
-		// await this.app.telegram.sendMessage(process.env.DEBUG_CHAT_ID as string, 'Error: ' + err.message)
-	}
+  private initMain(): void {
+    this.app = new Telegraf(process.env.BOT_TOKEN as string) as TelegrafFull;
+  }
 
-	private async initMain() {
-		this.app = new Telegraf(process.env.BOT_TOKEN as string);
-	}
+  private async startPooling(): Promise<void> {
+    await this.app.launch();
+    console.log('Bot is up');
+  }
 
-	private async startPooling() {
-		await this.app.launch();
-		console.log('Bot is up');
-	}
-
-	private initHandlers() {
-		this.app.catch((err: Error) => this.handleError(err));
-	}
+  private initHandlers(): void {
+    this.app.catch((err: Error) => Bot.handleError(err));
+  }
 }
