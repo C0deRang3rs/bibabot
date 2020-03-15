@@ -1,17 +1,10 @@
 import bluebird from 'bluebird';
 import redis from 'redis';
+import { PromisifiedRedis } from '../types/core/redis.types';
 
 bluebird.promisifyAll(redis);
 
-export interface PromisifiedRedis extends redis.RedisClient {
-  setAsync(key: string, value: string): Promise<void>;
-  keysAsync(key: string): Promise<Array<string>>;
-  mgetAsync(keys: Array<string>): Promise<Array<string>>;
-  getAsync(key: string): Promise<string>;
-  delAsync(key: string): Promise<void>;
-}
-
-export class Redis {
+export default class Redis {
   private static instance: Redis;
 
   public client!: PromisifiedRedis;

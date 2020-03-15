@@ -1,6 +1,7 @@
-import { Bot, BotEvent } from '../core/bot';
 import BibacoinService from '../services/bibacoin.service';
 import TrashService from '../services/trash.service';
+import { BotEvent } from '../types/core/bot.types';
+import Bot from '../core/bot';
 
 export default class GlobalMessageHandler {
   private static instance: GlobalMessageHandler;

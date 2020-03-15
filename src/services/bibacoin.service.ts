@@ -1,6 +1,4 @@
 import { ContextMessageUpdate, Markup } from 'telegraf';
-import { Bot, BotCommandType, BotListener } from '../core/bot';
-import { PromisifiedRedis, Redis } from '../core/redis';
 import {
   BibacoinAction,
   BibacoinProduct,
@@ -19,6 +17,10 @@ import {
   getProductActionContext,
   getActivityContext,
 } from '../utils/shop.helper';
+import Bot from '../core/bot';
+import { PromisifiedRedis } from '../types/core/redis.types';
+import Redis from '../core/redis';
+import { BotListener, BotCommandType } from '../types/core/bot.types';
 
 export default class BibacoinService {
   private static instance: BibacoinService;

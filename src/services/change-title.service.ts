@@ -2,14 +2,12 @@ import { ContextMessageUpdate } from 'telegraf';
 import zipObject from 'lodash.zipobject';
 import Bull from 'bull';
 import GenerateNameUtil from '../utils/generate-name.util';
-import { Bot, BotCommandType } from '../core/bot';
-import { Redis, PromisifiedRedis } from '../core/redis';
 import { ChangeTitleCommandType } from '../types/globals/commands.types';
-
-enum TimerUnits {
-  MINUTES = 60000,
-  HOURS = 3600000
-}
+import { TimerUnits } from '../types/services/change-title.service.types';
+import { PromisifiedRedis } from '../types/core/redis.types';
+import Bot from '../core/bot';
+import Redis from '../core/redis';
+import { BotCommandType } from '../types/core/bot.types';
 
 export default class ChangeTitleService {
   private static instance: ChangeTitleService;

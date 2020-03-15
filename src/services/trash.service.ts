@@ -1,14 +1,11 @@
 import { ContextMessageUpdate } from 'telegraf';
 import fs from 'fs';
-import { Bot, BotCommandType } from '../core/bot';
-import { PromisifiedRedis, Redis } from '../core/redis';
 import { TrashCommand } from '../types/globals/commands.types';
-
-const FUCK_TRIGGERS = [
-  'иди нахуй',
-  'пошёл нахуй',
-  'пошел нахуй',
-];
+import Bot from '../core/bot';
+import { PromisifiedRedis } from '../types/core/redis.types';
+import Redis from '../core/redis';
+import { FUCK_TRIGGERS } from '../types/services/trash.service';
+import { BotCommandType } from '../types/core/bot.types';
 
 export default class TrashService {
   private static instance: TrashService;

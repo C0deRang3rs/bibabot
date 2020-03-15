@@ -1,31 +1,8 @@
-import Telegraf, { ContextMessageUpdate, Telegram } from 'telegraf';
+import Telegraf, { ContextMessageUpdate } from 'telegraf';
 import { MessageSubTypes } from 'telegraf/typings/telegram-types';
+import { TelegrafFull, BotListener, BotEvent } from '../types/core/bot.types';
 
-export enum BotEvent {
-  MESSAGE = 'message'
-}
-
-export enum BotCommandType {
-  ON = 'on',
-  COMMAND = 'command',
-  ACTION = 'action'
-}
-
-export interface BotListener {
-  type: BotCommandType;
-  name: MessageSubTypes | string;
-  callback(ctx: ContextMessageUpdate): void;
-}
-
-export interface TelegramFull extends Telegram {
-  setChatTitle(id: number, name: string): Promise<void>;
-}
-
-export interface TelegrafFull extends Telegraf<ContextMessageUpdate> {
-  telegram: TelegramFull;
-}
-
-export class Bot {
+export default class Bot {
   private static instance: Bot;
   public app!: TelegrafFull;
   private listeners: Array<BotListener> = [];

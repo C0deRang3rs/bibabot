@@ -1,8 +1,6 @@
 import Bull from 'bull';
 import { ContextMessageUpdate, Markup } from 'telegraf';
 
-import { Bot, BotCommandType } from '../core/bot';
-import { Redis, PromisifiedRedis } from '../core/redis';
 import { BibaCommand } from '../types/globals/commands.types';
 import { BibacoinProduct } from '../types/services/bibacoin.service.types';
 import { getProductPrice, getActionByProduct } from '../utils/shop.helper';
@@ -13,6 +11,10 @@ import {
   NO_TABLE_DATA,
   NO_BIBA_MEASURED,
 } from '../types/services/biba.service.types';
+import Bot from '../core/bot';
+import { PromisifiedRedis } from '../types/core/redis.types';
+import Redis from '../core/redis';
+import { BotCommandType } from '../types/core/bot.types';
 
 export default class BibaService {
   private static instance: BibaService;
