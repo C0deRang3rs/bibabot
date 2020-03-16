@@ -2,23 +2,27 @@ import { ContextMessageUpdate } from 'telegraf';
 import fs from 'fs';
 import { TrashCommand } from '../types/globals/commands.types';
 import Bot from '../core/bot';
-import { PromisifiedRedis } from '../types/core/redis.types';
-import Redis from '../core/redis';
-import { FUCK_TRIGGERS } from '../types/services/trash.service';
 import { BotCommandType } from '../types/core/bot.types';
+import StatRepository from '../repositories/stat.repo';
+import { FUCK_TRIGGERS, CoinSide } from '../types/services/trash.service.types';
 
 export default class TrashService {
   private static instance: TrashService;
 
   private constructor(
     private readonly bot: Bot,
-    private readonly redis: PromisifiedRedis,
+    private readonly statRepo: StatRepository,
   ) {
     this.initListeners();
   }
 
   public static getInstance(): TrashService {
-    if (!TrashService.instance) TrashService.instance = new TrashService(Bot.getInstance(), Redis.getInstance().client);
+    if (!TrashService.instance) {
+      TrashService.instance = new TrashService(
+        Bot.getInstance(),
+        new StatRepository(),
+      );
+    }
 
     return TrashService.instance;
   }
@@ -94,27 +98,20 @@ export default class TrashService {
   }
 
   private async coinFlip(ctx: ContextMessageUpdate): Promise<void> {
-    if (!ctx.message || !ctx.message.text) {
-      await ctx.reply('Empty message');
-      return;
-    }
-
     const flipResult = Math.floor(Math.random() * 2) === 0 ? 'Heads' : 'Tails';
-    const currentResultCount = await this.redis.getAsync(`${flipResult.toLowerCase()}:count`);
-    const newResultCount = currentResultCount ? +currentResultCount + 1 : 1;
 
-    await this.redis.setAsync(`${flipResult.toLowerCase()}:count`, newResultCount.toString());
+    await this.statRepo.incrementStatCount(flipResult.toLowerCase());
 
     await ctx.reply(flipResult);
   }
 
   private async coinFlipStat(ctx: ContextMessageUpdate): Promise<void> {
-    const tailsCount = +await this.redis.getAsync('tails:count');
-    const headsCount = +await this.redis.getAsync('heads:count');
+    const tailsCount = await this.statRepo.getStatCount(CoinSide.TAILS);
+    const headsCount = await this.statRepo.getStatCount(CoinSide.HEADS);
 
     await ctx.reply(
       `Tails - ${Math.round((tailsCount / (tailsCount + headsCount)) * 100)}%\n`
-      + `Heads - ${Math.round((headsCount / (tailsCount + headsCount)) * 100)}%`,
+    + `Heads - ${Math.round((headsCount / (tailsCount + headsCount)) * 100)}%`,
     );
   }
 }

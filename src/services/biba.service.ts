@@ -12,35 +12,54 @@ import {
   NO_BIBA_MEASURED,
 } from '../types/services/biba.service.types';
 import Bot from '../core/bot';
-import { PromisifiedRedis } from '../types/core/redis.types';
-import Redis from '../core/redis';
 import { BotCommandType } from '../types/core/bot.types';
+import BibaRepository from '../repositories/biba.repo';
+import ChatRepository from '../repositories/chat.repo';
 
 export default class BibaService {
   private static instance: BibaService;
 
   private constructor(
     private readonly bot: Bot,
-    private readonly redis: PromisifiedRedis,
+    private readonly bibaRepo: BibaRepository,
+    private readonly chatRepo: ChatRepository,
   ) {
     this.initListeners();
   }
 
   public static getInstance(): BibaService {
-    if (!BibaService.instance) BibaService.instance = new BibaService(Bot.getInstance(), Redis.getInstance().client);
+    if (!BibaService.instance) {
+      BibaService.instance = new BibaService(
+        Bot.getInstance(),
+        new BibaRepository(),
+        new ChatRepository(),
+      );
+    }
 
     return BibaService.instance;
   }
 
   private static async unrankedBibaMetr(ctx: ContextMessageUpdate): Promise<void> {
-    await ctx.reply(`У @${ctx.message!.from!.username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
+    const username = `@${ctx.message!.from!.username}` || ctx.message!.from!.first_name;
+    await ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
+  }
+
+  private static getDailyMessage(allBibas: Array<Biba>): string {
+    if (!allBibas.length) return NO_BIBA_MEASURED;
+
+    const topBiba = allBibas[0];
+    const lowBiba = allBibas.pop();
+
+    return `👑 Королевская биба сегодня у ${topBiba.username} - ${topBiba.size} см\n\n`
+         + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
   }
 
   public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<void> {
     const user = (ctx.message && ctx.message!.from) || ctx.from;
+    const username = user!.username ? `@${user!.username}` : `${user!.first_name} ${user!.last_name}`;
     const biba = Math.floor(Math.random() * (35 + 1));
-    const lastBiba: Biba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${user!.id}`));
-    let bibaMessage = `У @${user!.username} биба ${biba} см`;
+    const lastBiba = await this.bibaRepo.getBibaByIds(ctx.chat!.id, user!.id);
+    let bibaMessage = `У ${username} биба ${biba} см`;
 
     if (lastBiba) {
       if (!lastBiba.outdated && !forceReroll) {
@@ -57,40 +76,40 @@ export default class BibaService {
         return;
       }
 
-      bibaMessage = `У @${user!.username} биба ${biba} см, в прошлый раз была ${lastBiba.size} см. `
-              + `${biba - parseInt(lastBiba.size, 10) > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA}`;
+      bibaMessage = `У ${username} биба ${biba} см, в прошлый раз была ${lastBiba.size} см. `
+                  + `${biba - lastBiba.size > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA}`;
     }
 
-    await this.redis.setAsync(
-      `biba:${ctx.chat!.id}:${user!.id}`,
-      JSON.stringify({ size: biba, username: user!.username, outdated: false }),
+    await this.bibaRepo.setBiba(
+      ctx.chat!.id,
+      {
+        size: biba,
+        username,
+        outdated: false,
+        userId: user!.id,
+      },
     );
 
     await ctx.reply(bibaMessage);
   }
 
   public async dailyBiba(done: Bull.DoneCallback): Promise<void> {
-    const keys = await this.redis.keysAsync('auto:rename:*');
-    const chats = keys.map((key: string) => key.split(':')[2]);
+    const chatIds = await this.chatRepo.getAllChats();
 
-    await Promise.all(chats.map(async (chat: string) => {
-      // eslint-disable-next-line no-console
-      console.log(`[${chat}] Daily biba`);
+    await Promise.all(chatIds.map(async (chatId) => {
+      console.log(`[${chatId}] Daily biba`);
 
-      const allBibasKeys: Array<string> = await this.redis.keysAsync(`biba:${chat}:*`);
-      const message = await this.getDailyMessage(allBibasKeys);
+      const allBibas = await this.bibaRepo.getAllBibasByChatId(chatId);
+      const message = BibaService.getDailyMessage(allBibas);
 
-      if (!allBibasKeys.length) {
-        await this.bot.app.telegram.sendMessage(chat, message);
+      if (!allBibas.length) {
+        await this.bot.app.telegram.sendMessage(chatId, message);
         return;
       }
 
-      await this.bot.app.telegram.sendMessage(chat, message);
+      await this.bot.app.telegram.sendMessage(chatId, message);
 
-      await Promise.all(allBibasKeys.map(async (bibaKey: string) => {
-        const lastBiba: Biba = JSON.parse(await this.redis.getAsync(bibaKey));
-        await this.redis.setAsync(bibaKey, JSON.stringify({ ...lastBiba, outdated: true }));
-      }));
+      await this.bibaRepo.setAllBibasOutdated(chatId);
     }));
 
     done();
@@ -117,13 +136,8 @@ export default class BibaService {
   }
 
   private async bibaTable(ctx: ContextMessageUpdate): Promise<void> {
-    const allBibasKeys: Array<string> = await this.redis.keysAsync(`biba:${ctx.chat!.id}:*`);
-    if (!allBibasKeys.length) {
-      await ctx.reply(NO_TABLE_DATA);
-      return;
-    }
+    const allBibas = await this.bibaRepo.getAllBibasByChatId(ctx.chat!.id);
 
-    const allBibas = await this.getAllBibas(allBibasKeys);
     if (!allBibas.length) {
       await ctx.reply(NO_TABLE_DATA);
       return;
@@ -131,26 +145,5 @@ export default class BibaService {
 
     const message = allBibas.map((biba, index) => `${index + 1}. ${biba.username} - ${biba.size} см`);
     ctx.reply(message.join('\n'));
-  }
-
-  private async getDailyMessage(allBibasKeys: Array<string>): Promise<string> {
-    const allBibas = await this.getAllBibas(allBibasKeys);
-
-    if (!allBibas.length) return NO_BIBA_MEASURED;
-
-    const topBiba = allBibas[0];
-    const lowBiba = allBibas.pop();
-
-    return `👑 Королевская биба сегодня у @${topBiba.username} - ${topBiba.size} см\n\n`
-         + `👌 Обсосом дня становится @${lowBiba!.username} - ${lowBiba!.size} см`;
-  }
-
-  private async getAllBibas(allBibasKeys: Array<string>): Promise<Array<Biba>> {
-    const allBibas = await this.redis.mgetAsync(allBibasKeys);
-    let parsedBibas: Array<Biba> = allBibas.map((rawBiba: string) => JSON.parse(rawBiba));
-    parsedBibas = parsedBibas.filter((biba) => !biba.outdated);
-    parsedBibas.sort((biba1, biba2) => (biba1.size < biba2.size ? 1 : -1));
-
-    return parsedBibas;
   }
 }

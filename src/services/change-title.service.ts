@@ -4,16 +4,13 @@ import Bull from 'bull';
 import GenerateNameUtil from '../utils/generate-name.util';
 import { ChangeTitleCommandType } from '../types/globals/commands.types';
 import { TimerUnits } from '../types/services/change-title.service.types';
-import { PromisifiedRedis } from '../types/core/redis.types';
 import Bot from '../core/bot';
-import Redis from '../core/redis';
 import { BotCommandType } from '../types/core/bot.types';
+import ChatRepository from '../repositories/chat.repo';
 
 export default class ChangeTitleService {
   private static instance: ChangeTitleService;
-
   private iterationUnits = TimerUnits.HOURS;
-
   private iterationTime = 12;
 
   get unitsName(): string {
@@ -29,8 +26,8 @@ export default class ChangeTitleService {
   }
 
   private constructor(
-    private readonly redis: PromisifiedRedis,
     private readonly bot: Bot,
+    private readonly chatRepo: ChatRepository,
   ) {
     this.initListeners();
   }
@@ -38,8 +35,8 @@ export default class ChangeTitleService {
   public static getInstance(): ChangeTitleService {
     if (!ChangeTitleService.instance) {
       ChangeTitleService.instance = new ChangeTitleService(
-        Redis.getInstance().client,
         Bot.getInstance(),
+        new ChatRepository(),
       );
     }
 
@@ -47,27 +44,25 @@ export default class ChangeTitleService {
   }
 
   public async resolveRenames(done: Bull.DoneCallback): Promise<void> {
-    const keys = await this.redis.keysAsync('auto:rename:*');
-    if (!keys.length) {
-      // eslint-disable-next-line no-console
+    const ids = await this.chatRepo.getAllChats();
+
+    if (!ids.length) {
       console.log('No timers');
       return;
     }
 
-    const ids = keys.map((key: string) => key.split(':')[2]);
-    const values = await this.redis.mgetAsync(keys);
+    const values = await this.chatRepo.getTimersByChatIds(ids);
     const objectedTimers: Record<string, string> = zipObject(ids, values);
 
     await Promise.all(Object.keys(objectedTimers).map(async (id: string) => {
       if ((Math.abs(+new Date() - +new Date(objectedTimers[id])) / this.iterationUnits) > this.iterationTime) {
-        // eslint-disable-next-line no-console
         console.log(`[${id}] Auto-rename`);
         try {
           await this.changeTitle(parseInt(id, 10));
         } catch (err) {
           Bot.handleError(err);
         }
-        await this.redis.setAsync(`auto:rename:${id}`, new Date().toISOString());
+        await this.chatRepo.setTimerByChatId(id, new Date());
       }
     }));
 
@@ -95,7 +90,8 @@ export default class ChangeTitleService {
   public async onStart(ctx: ContextMessageUpdate): Promise<void> {
     if (!ctx.chat) return;
 
-    const isTimerActive = await this.redis.getAsync(`auto:rename:${ctx.chat.id.toString()}`);
+    const chatId = ctx.chat.id;
+    const isTimerActive = await this.chatRepo.getTimerByChatId(chatId);
 
     if (isTimerActive) {
       await ctx.reply('Уже запущен.');
@@ -103,14 +99,14 @@ export default class ChangeTitleService {
     }
 
     await ctx.reply(`Ща как буду раз в ${this.iterationTime} ${this.unitsName} имена менять`);
-    await this.changeTitle(ctx.chat.id);
-    await this.redis.setAsync(`auto:rename:${ctx.chat.id.toString()}`, new Date().toISOString());
+    await this.changeTitle(chatId);
+    await this.chatRepo.setTimerByChatId(chatId, new Date());
   }
 
   public async onStop(ctx: ContextMessageUpdate): Promise<void> {
     if (!ctx.chat) return;
 
-    await this.redis.delAsync(`auto:rename:${ctx.chat.id.toString()}`);
+    await this.chatRepo.removeChat(ctx.chat.id);
     await ctx.reply('Всё, больше не буду');
   }
 
