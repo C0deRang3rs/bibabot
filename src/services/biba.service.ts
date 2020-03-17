@@ -47,10 +47,10 @@ export default class BibaService {
   private static getDailyMessage(allBibas: Array<Biba>): string {
     if (!allBibas.length) return NO_BIBA_MEASURED;
 
-    const topBiba = allBibas[0];
+    const topBiba = allBibas.shift();
     const lowBiba = allBibas.pop();
 
-    return `👑 Королевская биба сегодня у ${topBiba.username} - ${topBiba.size} см\n\n`
+    return `👑 Королевская биба сегодня у ${topBiba!.username} - ${topBiba!.size} см\n\n`
          + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
   }
 
