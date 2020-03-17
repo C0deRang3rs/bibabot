@@ -6,6 +6,11 @@ export default class StatRepository extends BaseRepository {
 
   public async getStatCount(statName: string): Promise<number> {
     const count = await this.redis.getAsync(`${this.entityName}:${statName}:${this.entitySuffix}`);
+
+    if (!count) {
+      return 0;
+    }
+
     return parseInt(count, 10);
   }
 

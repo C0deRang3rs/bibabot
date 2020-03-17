@@ -108,10 +108,12 @@ export default class TrashService {
   private async coinFlipStat(ctx: ContextMessageUpdate): Promise<void> {
     const tailsCount = await this.statRepo.getStatCount(CoinSide.TAILS);
     const headsCount = await this.statRepo.getStatCount(CoinSide.HEADS);
+    const tailsStat = Math.round((tailsCount / (tailsCount + headsCount)) * 100);
+    const headsStat = Math.round((headsCount / (tailsCount + headsCount)) * 100);
 
     await ctx.reply(
-      `Tails - ${Math.round((tailsCount / (tailsCount + headsCount)) * 100)}%\n`
-    + `Heads - ${Math.round((headsCount / (tailsCount + headsCount)) * 100)}%`,
+      `Tails - ${tailsStat || 0}%\n`
+    + `Heads - ${headsStat || 0}%`,
     );
   }
 }

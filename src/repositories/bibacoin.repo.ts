@@ -13,6 +13,11 @@ export default class BibacoinRepository extends BaseRepository {
 
   public async getBibacoinBalanceByIds(chatId: number, userId: number): Promise<number> {
     const coins = await this.redis.getAsync(`${this.entityName}:${chatId}:${userId}`);
+
+    if (!coins) {
+      return 0;
+    }
+
     return parseFloat(coins);
   }
 }
