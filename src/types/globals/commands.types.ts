@@ -13,8 +13,6 @@ export enum BibaCommand {
 
 export enum BibacoinCommand {
   BALANCE = 'balance',
-  BUY = 'buy',
-  SHOP = 'shop',
   INCOME_LIST = 'income_list',
   SET_BALANCE = 'set_balance',
 }
@@ -23,4 +21,8 @@ export enum TrashCommand {
   FLIP = 'flip',
   ROLL = 'roll',
   FLIP_STAT = 'flip_stat',
+}
+
+export enum ShopCommand {
+  SHOP = 'shop',
 }

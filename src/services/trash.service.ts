@@ -49,7 +49,7 @@ export default class TrashService {
       return;
     }
 
-    const payload = ctx.message.text.split(TrashCommand.ROLL)[1].trim();
+    const payload = ctx.message.text.split(' ')[1];
 
     let from = 1;
     let to = 100;
