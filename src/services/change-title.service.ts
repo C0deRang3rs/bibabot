@@ -55,13 +55,15 @@ export default class ChangeTitleService {
     const objectedTimers: Record<string, string> = zipObject(ids, values);
 
     await Promise.all(Object.keys(objectedTimers).map(async (id: string) => {
-      if ((Math.abs(+new Date() - +new Date(objectedTimers[id])) / this.iterationUnits) > this.iterationTime) {
+      if (this.isRenameNeeded(objectedTimers[id])) {
         console.log(`[${id}] Auto-rename`);
+
         try {
           await this.changeTitle(parseInt(id, 10));
         } catch (err) {
           Bot.handleError(err);
         }
+
         await this.chatRepo.setTimerByChatId(id, new Date());
       }
     }));
@@ -146,5 +148,11 @@ export default class ChangeTitleService {
     const newName = await GenerateNameUtil.generateName();
     console.log(`[${id}] New name: ${newName}`);
     await this.bot.app.telegram.setChatTitle(id, newName);
+  }
+
+  private isRenameNeeded(timer: string): boolean {
+    const now = new Date().getTime();
+    const parsedTimer = new Date(timer).getTime();
+    return (Math.abs(now - parsedTimer) / this.iterationUnits) > this.iterationTime;
   }
 }

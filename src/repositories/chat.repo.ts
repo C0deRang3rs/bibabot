@@ -10,7 +10,7 @@ export default class ChatRepository extends BaseRepository {
   }
 
   public async getTimersByChatIds(chatIds: Array<number>): Promise<Array<string>> {
-    return this.redis.mgetAsync(chatIds.map((chatId) => chatId.toString()));
+    return this.redis.mgetAsync(chatIds.map((chatId) => `${this.entityName}:${chatId.toString()}`));
   }
 
   public async setTimerByChatId(chatId: number, timer: Date): Promise<void>;
