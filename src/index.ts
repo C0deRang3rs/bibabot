@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable global-require */
 import { config } from 'dotenv';
 import Server from './core/server';
 import Queue from './core/queue';
@@ -10,6 +8,7 @@ import GlobalMessageHandler from './handlers/global.message.handler';
 import BibacoinService from './services/bibacoin.service';
 import Redis from './core/redis';
 import Bot from './core/bot';
+import ShopService from './services/shop.service';
 
 if (process.env.CLOUD !== 'true') config();
 
@@ -24,5 +23,6 @@ ChangeTitleService.getInstance();
 BibaService.getInstance();
 TrashService.getInstance();
 BibacoinService.getInstance();
+ShopService.getInstance();
 Bot.getInstance().applyListeners();
 GlobalMessageHandler.getInstance();

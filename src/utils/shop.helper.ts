@@ -1,22 +1,21 @@
 import { IncomingMessage } from 'telegraf/typings/telegram-types';
 import {
-  BibacoinProduct,
-  BibacoinAction,
-  BibacoinProductToActionMap,
-  BibacoinPrice,
   BibacoinCredit,
   BibacoinActivity,
 } from '../types/services/bibacoin.service.types';
+import {
+  Product, ShopAction, ProductToActionMap, ProductPrice,
+} from '../types/services/shop.service.types';
 
-export const getActionByProduct = (product: BibacoinProduct): BibacoinAction => BibacoinProductToActionMap[product];
+export const getActionByProduct = (product: Product): ShopAction => ProductToActionMap[product];
 
-export const getProductPrice = (product: BibacoinProduct): number => BibacoinPrice[product];
+export const getProductPrice = (product: Product): number => ProductPrice[product];
 
 export const getPriceByActivity = (activity: BibacoinActivity): number => BibacoinCredit[activity];
 
 export const getActivitiesList = (): Array<BibacoinActivity> => Object.keys(BibacoinActivity) as Array<BibacoinActivity>;
 
-export const getProductsList = (): Array<BibacoinProduct> => Object.keys(BibacoinPrice) as Array<BibacoinProduct>;
+export const getProductsList = (): Array<Product> => Object.keys(ProductPrice) as Array<Product>;
 
 export const getPriceByMessage = (message: IncomingMessage): number => {
   if (message.photo) return BibacoinCredit[BibacoinActivity.PHOTO];
@@ -41,12 +40,12 @@ export const getActivityContext = (activity: BibacoinActivity): string => {
   return `${message} - 💰${getPriceByActivity(activity)}¢`;
 };
 
-export const getProductActionContext = (product: BibacoinProduct): string => {
+export const getProductActionContext = (product: Product): string => {
   let message: string;
 
   switch (product) {
-    case BibacoinProduct.BIBA_CM: message = '+1 см бибы'; break;
-    case BibacoinProduct.BIBA_REROLL: message = 'Зароллить заново'; break;
+    case Product.BIBA_CM: message = '+1 см бибы'; break;
+    case Product.BIBA_REROLL: message = 'Перемерять бибу'; break;
     default: return 'No description yet';
   }
 
