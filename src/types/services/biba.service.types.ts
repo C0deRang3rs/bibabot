@@ -1,7 +1,8 @@
 export interface Biba {
-  size: string;
+  size: number;
   username: string;
   outdated: boolean;
+  userId: number;
 }
 
 export const POSITIVE_BIBA = 'Так держать!';

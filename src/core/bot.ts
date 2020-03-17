@@ -27,10 +27,12 @@ export default class Bot {
 
   private static logger(ctx: ContextMessageUpdate, next: Function, commandName: string): Function {
     const user = (ctx.message && ctx.message!.from) || ctx.from!;
+    const chat = ctx.chat!;
+    const username = user!.username ? `@${user!.username}` : `${user!.first_name} ${user!.last_name}`;
     const message = (ctx.message && ctx.message!.text) || ctx.match;
 
     if (commandName !== BotEvent.MESSAGE) {
-      console.log(`[${ctx.chat!.id}] ${ctx.chat!.title} from user @${user.username} - ${message}`);
+      console.log(`[${chat.id}] ${chat.title} from user ${username} - ${message}`);
     }
 
     return next();
