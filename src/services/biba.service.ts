@@ -94,23 +94,27 @@ export default class BibaService {
   }
 
   public async dailyBiba(done: Bull.DoneCallback): Promise<void> {
-    const chatIds = await this.chatRepo.getAllChats();
+    try {
+      const chatIds = await this.chatRepo.getAllChats();
 
-    await Promise.all(chatIds.map(async (chatId) => {
-      console.log(`[${chatId}] Daily biba`);
+      await Promise.all(chatIds.map(async (chatId) => {
+        console.log(`[${chatId}] Daily biba`);
 
-      const allBibas = await this.bibaRepo.getAllBibasByChatId(chatId);
-      const message = BibaService.getDailyMessage(allBibas);
+        const allBibas = await this.bibaRepo.getAllBibasByChatId(chatId);
+        const message = BibaService.getDailyMessage(allBibas);
 
-      if (!allBibas.length) {
+        if (!allBibas.length) {
+          await this.bot.app.telegram.sendMessage(chatId, message);
+          return;
+        }
+
         await this.bot.app.telegram.sendMessage(chatId, message);
-        return;
-      }
 
-      await this.bot.app.telegram.sendMessage(chatId, message);
-
-      await this.bibaRepo.setAllBibasOutdated(chatId);
-    }));
+        await this.bibaRepo.setAllBibasOutdated(chatId);
+      }));
+    } catch (err) {
+      Bot.handleError(err);
+    }
 
     done();
   }
