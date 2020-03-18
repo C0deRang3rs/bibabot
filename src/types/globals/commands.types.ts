@@ -1,6 +1,6 @@
 export enum ChangeTitleCommandType {
-  START = 'start',
-  STOP = 'stop',
+  START_RENAME = 'start_rename',
+  STOP_RENAME = 'stop_rename',
   RENAME = 'rename',
   ITERATION_CHANGE = 'iteration_change',
 }
@@ -25,4 +25,9 @@ export enum TrashCommand {
 
 export enum ShopCommand {
   SHOP = 'shop',
+}
+
+export enum GlobalCommand {
+  START = 'start',
+  STOP = 'stop',
 }

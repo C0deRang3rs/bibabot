@@ -6,7 +6,7 @@ import { ChangeTitleCommandType } from '../types/globals/commands.types';
 import { TimerUnits } from '../types/services/change-title.service.types';
 import Bot from '../core/bot';
 import { BotCommandType } from '../types/core/bot.types';
-import ChatRepository from '../repositories/chat.repo';
+import TimerRepository from '../repositories/timer.repo';
 
 export default class ChangeTitleService {
   private static instance: ChangeTitleService;
@@ -27,7 +27,7 @@ export default class ChangeTitleService {
 
   private constructor(
     private readonly bot: Bot,
-    private readonly chatRepo: ChatRepository,
+    private readonly timerRepo: TimerRepository,
   ) {
     this.initListeners();
   }
@@ -36,7 +36,7 @@ export default class ChangeTitleService {
     if (!ChangeTitleService.instance) {
       ChangeTitleService.instance = new ChangeTitleService(
         Bot.getInstance(),
-        new ChatRepository(),
+        new TimerRepository(),
       );
     }
 
@@ -44,14 +44,13 @@ export default class ChangeTitleService {
   }
 
   public async resolveRenames(done: Bull.DoneCallback): Promise<void> {
-    const ids = await this.chatRepo.getAllChats();
+    const ids = await this.timerRepo.getAllTimers();
 
     if (!ids.length) {
-      console.log('No timers');
       return;
     }
 
-    const values = await this.chatRepo.getTimersByChatIds(ids);
+    const values = await this.timerRepo.getTimersByChatIds(ids);
     const objectedTimers: Record<string, string> = zipObject(ids, values);
 
     await Promise.all(Object.keys(objectedTimers).map(async (id: string) => {
@@ -64,7 +63,7 @@ export default class ChangeTitleService {
           Bot.handleError(err);
         }
 
-        await this.chatRepo.setTimerByChatId(id, new Date());
+        await this.timerRepo.setTimerByChatId(id, new Date());
       }
     }));
 
@@ -93,7 +92,7 @@ export default class ChangeTitleService {
     if (!ctx.chat) return;
 
     const chatId = ctx.chat.id;
-    const isTimerActive = await this.chatRepo.getTimerByChatId(chatId);
+    const isTimerActive = await this.timerRepo.getTimerByChatId(chatId);
 
     if (isTimerActive) {
       await ctx.reply('Уже запущен.');
@@ -102,13 +101,13 @@ export default class ChangeTitleService {
 
     await ctx.reply(`Ща как буду раз в ${this.iterationTime} ${this.unitsName} имена менять`);
     await this.changeTitle(chatId);
-    await this.chatRepo.setTimerByChatId(chatId, new Date());
+    await this.timerRepo.setTimerByChatId(chatId, new Date());
   }
 
   public async onStop(ctx: ContextMessageUpdate): Promise<void> {
     if (!ctx.chat) return;
 
-    await this.chatRepo.removeChat(ctx.chat.id);
+    await this.timerRepo.removeTimer(ctx.chat.id);
     await ctx.reply('Всё, больше не буду');
   }
 
@@ -123,12 +122,12 @@ export default class ChangeTitleService {
     this.bot.addListeners([
       {
         type: BotCommandType.COMMAND,
-        name: ChangeTitleCommandType.START,
+        name: ChangeTitleCommandType.START_RENAME,
         callback: (ctx): Promise<void> => this.onStart(ctx),
       },
       {
         type: BotCommandType.COMMAND,
-        name: ChangeTitleCommandType.STOP,
+        name: ChangeTitleCommandType.STOP_RENAME,
         callback: (ctx): Promise<void> => this.onStop(ctx),
       },
       {
