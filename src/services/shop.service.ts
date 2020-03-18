@@ -112,7 +112,7 @@ export default class ShopService {
 
       const balance = await this.bibacoinService.newTransaction(userId, chatId, price);
       await ctx.answerCbQuery(
-        `Биба увеличена на один см. Теперь ${currentBiba.size}см. `
+        `Биба увеличена на один см. Теперь ${currentBiba.size + 1} см. `
         + `На счету осталось ${balance} коинов`,
       );
     } catch (e) {
