@@ -83,12 +83,19 @@ export default class ChangeTitleService {
       default: await ctx.reply('Wrong time format, try something like: 2 hours, 5 minutes, 1 hours (lmao)'); return;
     }
 
-    if (!new RegExp(/^\d+$/).test(commandData[1])) {
-      await ctx.reply('Время может содержать только цифры');
+    const newIterationTime = parseInt(commandData[1], 10);
+
+    if (!new RegExp(/^\d+$/).test(commandData[1]) || newIterationTime <= 0) {
+      await ctx.reply('Время может содержать только числа больше 1');
       return;
     }
 
-    this.iterationTime = parseInt(commandData[1], 10);
+    if (commandData[1].length > 3) {
+      await ctx.reply('Время не может быть больше 999');
+      return;
+    }
+
+    this.iterationTime = newIterationTime;
 
     console.log(`[${ctx.chat!.id}] Interval - ${this.iterationTime}, units - ${this.iterationUnits}`);
     await ctx.reply('Iteration interval changed');
