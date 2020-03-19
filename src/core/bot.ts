@@ -46,7 +46,8 @@ export default class Bot {
     this.listeners.forEach((listener) => this.app[listener.type](
       listener.name as MessageSubTypes,
       (ctx, next) => Bot.logger(ctx, next as Function, listener.name),
-      listener.callback,
+      (ctx, next) => { listener.callback(ctx); return next!(); },
+      (ctx) => ctx.deleteMessage(),
     ));
   }
 
