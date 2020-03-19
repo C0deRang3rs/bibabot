@@ -1,203 +1,116 @@
-import { Bot, BotCommandType, BotListener } from "../core/bot";
-import { ContextMessageUpdate, Markup } from "telegraf";
-import { PromisifiedRedis, Redis } from "../core/redis";
+import { ContextMessageUpdate } from 'telegraf';
 import {
-    BibacoinAction,
-    BibacoinProduct,
-    ZERO_BALANCE,
-    NO_BIBA_TO_BUY,
-    BibacoinActivity,
-    NO_BIBA_TO_REROLL
-} from "../types/services/bibacoin.service.types";
-import { BibacoinCommand } from "../types/globals/commands.types";
-import { BibaService } from "./biba.service";
+  ZERO_BALANCE,
+} from '../types/services/bibacoin.service.types';
+import { BibacoinCommand } from '../types/globals/commands.types';
 import {
-    getPriceByMessage,
-    getProductsList,
-    getProductPrice,
-    getActionByProduct,
-    getPriceByActivity,
-    getActivitiesList
-} from "../utils/shop.helper";
+  getPriceByMessage,
+  getActivitiesList,
+  getActivityContext,
+} from '../utils/shop.helper';
+import Bot from '../core/bot';
+import { BotListener, BotCommandType } from '../types/core/bot.types';
+import BibacoinRepository from '../repositories/bibacoin.repo';
 
-export class BibacoinService {
-    private static instance: BibacoinService;
+export default class BibacoinService {
+  private static instance: BibacoinService;
 
-    private constructor(
-        private readonly bot: Bot,
-        private readonly redis: PromisifiedRedis,
-        private readonly bibaService: BibaService
-    ) {
-        this.initListeners();
+  private constructor(
+    private readonly bot: Bot,
+    private readonly bibacoinRepo: BibacoinRepository,
+  ) {
+    this.initListeners();
+  }
+
+  public static getInstance(): BibacoinService {
+    if (!BibacoinService.instance) {
+      BibacoinService.instance = new BibacoinService(
+        Bot.getInstance(),
+        new BibacoinRepository(),
+      );
     }
 
-    public static getInstance(): BibacoinService {
-        if (!BibacoinService.instance)
-            BibacoinService.instance = new BibacoinService(
-                Bot.getInstance(),
-                Redis.getInstance().client,
-                BibaService.getInstance(),
-            );
+    return BibacoinService.instance;
+  }
 
-        return BibacoinService.instance;
+  private static async sendIncomeList(ctx: ContextMessageUpdate): Promise<void> {
+    const list = getActivitiesList();
+
+    await ctx.reply(list.map((activity) => `${getActivityContext(activity)}`).join('\n'));
+  }
+
+  public addMessageCoins = async (ctx: ContextMessageUpdate, next: Function | undefined): Promise<Function> => {
+    if (!ctx.message) return next!();
+
+    const chatId = ctx.chat!.id;
+    const userId = ctx.message.from!.id;
+
+    const currentBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, userId);
+    const messagePrice = getPriceByMessage(ctx.message);
+    const newBalance = currentBalance + messagePrice;
+
+    await this.bibacoinRepo.setBibacoinBalance(chatId, userId, newBalance);
+
+    return next!();
+  };
+
+  public async hasEnoughCredits(userId: number, chatId: number, value: number): Promise<boolean> {
+    const currentBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, userId);
+
+    if (currentBalance >= value) {
+      return true;
     }
 
-    private initListeners() {
-        const commands: BotListener[] = [
-            { type: BotCommandType.COMMAND, name: BibacoinCommand.BALANCE, callback: (ctx) => this.getBalance(ctx) },
-            { type: BotCommandType.COMMAND, name: BibacoinCommand.SHOP, callback: (ctx) => this.sendProductsList(ctx) },
-            { type: BotCommandType.COMMAND, name: BibacoinCommand.INCOME_LIST, callback: (ctx) => this.sendIncomeList(ctx) },
-            { type: BotCommandType.ACTION, name: BibacoinAction.BUY_CM, callback: (ctx) => this.buyOneCM(ctx) },
-            { type: BotCommandType.ACTION, name: BibacoinAction.BUY_REROLL, callback: (ctx) => this.buyReroll(ctx) },
-        ];
+    throw new Error(`Недостаточно бибакоинов. Требуется ${value}, у тебя ${currentBalance}`);
+  }
 
-        if (process.env.PRODUCTION === 'false') {
-            commands.push(
-                { type: BotCommandType.COMMAND, name: BibacoinCommand.SET_BALANCE, callback: (ctx) => this.setBalance(ctx) }
-            );
-        }
+  public async newTransaction(userId: number, chatId: number, value: number): Promise<number> {
+    const currentBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, userId);
 
-        this.bot.addListeners(commands);
+    const newBalance = currentBalance - value;
+    await this.bibacoinRepo.setBibacoinBalance(chatId, userId, newBalance);
+
+    return newBalance;
+  }
+
+  private initListeners(): void {
+    const commands: BotListener[] = [
+      {
+        type: BotCommandType.COMMAND,
+        name: BibacoinCommand.BALANCE,
+        callback: (ctx): Promise<void> => this.getBalance(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: BibacoinCommand.INCOME_LIST,
+        callback: (ctx): Promise<void> => BibacoinService.sendIncomeList(ctx),
+      },
+    ];
+
+    if (process.env.PRODUCTION === 'false') {
+      commands.push(
+        { type: BotCommandType.COMMAND, name: BibacoinCommand.SET_BALANCE, callback: (ctx) => this.setBalance(ctx) },
+      );
     }
 
-    // --- SECTION [HANDLERS] -----------------------------------------------------------------------------------------
+    this.bot.addListeners(commands);
+  }
 
-    public addMessageCoins = async (ctx: ContextMessageUpdate, next: any) => {
-        if (!ctx.message) return;
+  private async setBalance(ctx: ContextMessageUpdate): Promise<void> {
+    const balance = ctx.message!.text!.split(BibacoinCommand.SET_BALANCE)[1].trim();
 
-        const currentBalance = (await this.redis.getAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`)) || 0;
-
-        const messagePrice = getPriceByMessage(ctx.message);
-
-        const newBalance = parseFloat(currentBalance) + messagePrice;
-
-        await this.redis.setAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`, newBalance.toString());
-
-        return next();
+    if (!balance) {
+      await ctx.reply('Укажи сколько надо');
+      return;
     }
 
-    private async setBalance(ctx: ContextMessageUpdate) {
-        const balance = ctx.message!.text!.split(BibacoinCommand.SET_BALANCE)[1].trim();
+    await this.bibacoinRepo.setBibacoinBalance(ctx.chat!.id, ctx.message!.from!.id, balance);
+    await ctx.reply('Done');
+  }
 
-        if (!balance) return ctx.reply('Укажи сколько надо');
-
-        await this.redis.setAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`, balance!.toString())
-        await ctx.reply('Done');
-    }
-
-    private async sendProductsList(ctx: ContextMessageUpdate) {
-        const list = getProductsList();
-
-        return ctx.reply('За бибакоины можно купить:',
-            Markup.inlineKeyboard(
-                list.map(product => [Markup.callbackButton(this.getProductActionContext(product), getActionByProduct(product))])
-            ).extra()
-        );
-    }
-
-    private async sendIncomeList(ctx: ContextMessageUpdate) {
-        const list = getActivitiesList();
-
-        await ctx.reply(list.map(activity => {
-            return `${this.getActivityContext(activity)}`
-        }).join('\n'));
-    }
-
-    private async buyReroll(ctx: ContextMessageUpdate) {
-        try {
-            const price = getProductPrice(BibacoinProduct.BIBA_REROLL);
-            await this.hasEnoughCredits(ctx.from!.id, ctx.chat!.id, price);
-
-            const currentBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx?.from?.id}`));
-
-            if (!currentBiba) return ctx.answerCbQuery(NO_BIBA_TO_REROLL)
-            
-            await this.bibaService.bibaMetr(ctx, true);
-
-            const balance = await this.newTransaction(ctx.from!.id, ctx.chat!.id, price);
-
-            await ctx.answerCbQuery(`Реролл куплен! На счету осталось ${balance} коинов`);
-
-        } catch (e) {
-            await ctx.answerCbQuery(e.message);
-
-            throw e;
-        }
-    }
-
-    private async buyOneCM(ctx: ContextMessageUpdate) {
-        try {
-            const price = getProductPrice(BibacoinProduct.BIBA_CM);
-            await this.hasEnoughCredits(ctx.from!.id, ctx.chat!.id, price);
-
-            const currentBiba = JSON.parse(await this.redis.getAsync(`biba:${ctx.chat!.id}:${ctx!.from!.id}`));
-
-            if (!currentBiba) return ctx.answerCbQuery(NO_BIBA_TO_BUY);
-
-            currentBiba.size = currentBiba.size + 1;
-
-            await this.redis.setAsync(`biba:${ctx.chat!.id}:${ctx.from!.id}`, JSON.stringify(currentBiba));
-
-            const balance = await this.newTransaction(ctx.from!.id, ctx.chat!.id, price);
-            await ctx.answerCbQuery(`Биба увеличена на один см. Теперь ${currentBiba.size}см. На счету осталось ${balance} коинов`);
-
-        } catch (e) {
-            await ctx.answerCbQuery(e.message);
-
-            throw e;
-        }
-    }
-
-    private async hasEnoughCredits(userId: number, chatId: number, value: number): Promise<boolean> {
-        const currentBalance = (await this.redis.getAsync(`coin:${chatId}:${userId}`)) || 0;
-        if (currentBalance >= value) {
-            return true;
-        } else {
-            throw new Error(`Недостаточно бибакоинов. Требуется ${value}, у тебя ${currentBalance}`);
-        }
-    }
-
-    private async newTransaction(userId: number, chatId: number, value: number) {
-        const currentBalance = (await this.redis.getAsync(`coin:${chatId}:${userId}`)) || 0;
-
-        const newBalance = currentBalance - value;
-        await this.redis.setAsync(`coin:${chatId}:${userId}`, newBalance);
-
-        return newBalance;
-    }
-
-    // --- SECTION [GETTERS] ------------------------------------------------------------------------------------------
-
-    private async getBalance(ctx: ContextMessageUpdate) {
-        const balance = await this.redis.getAsync(`coin:${ctx.chat!.id}:${ctx.message!.from!.id}`);
-        const message = balance ? `У тебя на счету ${balance} бибакоинов` : ZERO_BALANCE;
-        await ctx.reply(message);
-    }
-
-    private getActivityContext(activity: BibacoinActivity) {
-        let message: string;
-
-        switch (activity) {
-            case BibacoinActivity.MESSAGE: message = 'Сообщение'; break;
-            case BibacoinActivity.PHOTO: message = 'Картинка'; break;
-            case BibacoinActivity.STICKER: message = 'Стикер'; break;
-            case BibacoinActivity.VIDEO: message = 'Видос'; break;
-            case BibacoinActivity.VOICE: message = 'Войс'; break;
-            default: message = 'Пока нет описания этой активности';
-        }
-
-        return `${message} - 💰${getPriceByActivity(activity)}¢`;
-    }
-
-    private getProductActionContext(product: BibacoinProduct): string {
-        let message: string;
-
-        switch (product) {
-            case BibacoinProduct.BIBA_CM: message = `+1 см бибы`; break;
-            case BibacoinProduct.BIBA_REROLL: message = `Зароллить заново`; break;
-            default: return 'No description yet';
-        }
-
-        return `${message} 💰${getProductPrice(product)}¢`;
-    }
+  private async getBalance(ctx: ContextMessageUpdate): Promise<void> {
+    const balance = await this.bibacoinRepo.getBibacoinBalanceByIds(ctx.chat!.id, ctx.message!.from!.id);
+    const message = balance ? `У тебя на счету ${balance} бибакоинов` : ZERO_BALANCE;
+    await ctx.reply(message);
+  }
 }
