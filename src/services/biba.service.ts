@@ -147,7 +147,7 @@ export default class BibaService {
       return;
     }
 
-    const message = allBibas.map((biba, index) => `${index + 1}. ${biba.username} - ${biba.size} см`);
+    const message = allBibas.map((biba, index) => `${index + 1}. ${biba.username.replace('@', '')} - ${biba.size} см`);
     ctx.reply(message.join('\n'));
   }
 }
