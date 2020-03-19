@@ -71,9 +71,9 @@ export default class ChangeTitleService {
   }
 
   public async onIterationChange(ctx: ContextMessageUpdate): Promise<void> {
-    const commandData = ctx.message!.text!.split(ChangeTitleCommandType.ITERATION_CHANGE)[1].trim().split(' ');
+    const commandData = ctx.message!.text!.split(' ');
 
-    switch (commandData[1]) {
+    switch (commandData[2]) {
       case 'hours':
         this.iterationUnits = TimerUnits.HOURS;
         break;
@@ -82,7 +82,13 @@ export default class ChangeTitleService {
         break;
       default: await ctx.reply('Wrong time format, try something like: 2 hours, 5 minutes, 1 hours (lmao)'); return;
     }
-    this.iterationTime = +commandData[0];
+
+    if (!new RegExp(/^\d+$/).test(commandData[1])) {
+      await ctx.reply('Время может содержать только цифры');
+      return;
+    }
+
+    this.iterationTime = parseInt(commandData[1], 10);
 
     console.log(`[${ctx.chat!.id}] Interval - ${this.iterationTime}, units - ${this.iterationUnits}`);
     await ctx.reply('Iteration interval changed');
