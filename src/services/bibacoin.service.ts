@@ -13,7 +13,7 @@ import { BotListener, BotCommandType } from '../types/core/bot.types';
 import BibacoinRepository from '../repositories/bibacoin.repo';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
-import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
+import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 
 export default class BibacoinService extends BaseService {
   private static instance: BibacoinService;
@@ -35,7 +35,7 @@ export default class BibacoinService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteResponseMessage(10000)
+  @DeleteLastMessage('income')
   private static async sendIncomeList(ctx: ContextMessageUpdate): Promise<Message> {
     const list = getActivitiesList();
 

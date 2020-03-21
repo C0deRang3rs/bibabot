@@ -14,7 +14,7 @@ import { ShopAction, Product } from '../types/services/shop.service.types';
 import { ShopCommand } from '../types/globals/commands.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
-import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
+import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 
 export default class ShopService extends BaseService {
   private static instance: ShopService;
@@ -40,7 +40,7 @@ export default class ShopService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteResponseMessage(10000)
+  @DeleteLastMessage('shop')
   private static async sendProductsList(ctx: ContextMessageUpdate): Promise<Message> {
     const list = getProductsList();
 

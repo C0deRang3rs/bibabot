@@ -7,7 +7,7 @@ import StatRepository from '../repositories/stat.repo';
 import { FUCK_TRIGGERS, CoinSide } from '../types/services/trash.service.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
-import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
+import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 
 export default class TrashService extends BaseService {
   private static instance: TrashService;
@@ -45,7 +45,6 @@ export default class TrashService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteResponseMessage(10000)
   private static async roll(ctx: ContextMessageUpdate): Promise<Message> {
     if (!ctx.message || !ctx.message.text) {
       return ctx.reply('Empty message');
@@ -98,7 +97,6 @@ export default class TrashService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteResponseMessage(10000)
   private async coinFlip(ctx: ContextMessageUpdate): Promise<Message> {
     const flipResult = Math.floor(Math.random() * 2) === 0 ? 'Heads' : 'Tails';
 
@@ -108,7 +106,7 @@ export default class TrashService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteResponseMessage(10000)
+  @DeleteLastMessage('flip_stat')
   private async coinFlipStat(ctx: ContextMessageUpdate): Promise<Message> {
     const tailsCount = await this.statRepo.getStatCount(CoinSide.TAILS);
     const headsCount = await this.statRepo.getStatCount(CoinSide.HEADS);

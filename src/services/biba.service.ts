@@ -17,8 +17,8 @@ import BibaRepository from '../repositories/biba.repo';
 import ChatRepository from '../repositories/chat.repo';
 import { Product } from '../types/services/shop.service.types';
 import BaseService from './base.service';
-import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
+import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -42,7 +42,6 @@ export default class BibaService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteResponseMessage(5000)
   private static async unrankedBibaMetr(ctx: ContextMessageUpdate): Promise<Message> {
     const username = `@${ctx.message!.from!.username}` || ctx.message!.from!.first_name;
     return ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
@@ -144,7 +143,7 @@ export default class BibaService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteResponseMessage(10000)
+  @DeleteLastMessage('biba_table')
   private async bibaTable(ctx: ContextMessageUpdate): Promise<Message> {
     const allBibas = await this.bibaRepo.getAllBibasByChatId(ctx.chat!.id);
 
