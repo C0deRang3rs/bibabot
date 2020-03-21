@@ -1,7 +1,7 @@
 import { ContextMessageUpdate } from 'telegraf';
 import { Message } from 'telegraf/typings/telegram-types';
 import {
-  ZERO_BALANCE,
+  ZERO_BALANCE, BibacoinAction,
 } from '../types/services/bibacoin.service.types';
 import { BibacoinCommand } from '../types/globals/commands.types';
 import {
@@ -80,13 +80,13 @@ export default class BibacoinService extends BaseService {
     const commands: BotListener[] = [
       {
         type: BotCommandType.COMMAND,
-        name: BibacoinCommand.BALANCE,
-        callback: (ctx): Promise<Message> => this.getBalance(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
         name: BibacoinCommand.INCOME_LIST,
         callback: (ctx): Promise<Message> => BibacoinService.sendIncomeList(ctx),
+      },
+      {
+        type: BotCommandType.ACTION,
+        name: BibacoinAction.BALANCE,
+        callback: (ctx): Promise<void> => this.getBalance(ctx),
       },
     ];
 
@@ -110,11 +110,9 @@ export default class BibacoinService extends BaseService {
     return ctx.reply('Done');
   }
 
-  @DeleteRequestMessage()
-  @DeleteResponseMessage(5000)
-  private async getBalance(ctx: ContextMessageUpdate): Promise<Message> {
-    const balance = await this.bibacoinRepo.getBibacoinBalanceByIds(ctx.chat!.id, ctx.message!.from!.id);
+  private async getBalance(ctx: ContextMessageUpdate): Promise<void> {
+    const balance = await this.bibacoinRepo.getBibacoinBalanceByIds(ctx.chat!.id, ctx.from!.id);
     const message = balance ? `У тебя на счету ${balance} бибакоинов` : ZERO_BALANCE;
-    return ctx.reply(message);
+    await ctx.answerCbQuery(message);
   }
 }

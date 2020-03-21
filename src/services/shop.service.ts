@@ -2,7 +2,7 @@ import { ContextMessageUpdate, Markup } from 'telegraf';
 import { Message } from 'telegraf/typings/telegram-types';
 import { BotCommandType } from '../types/core/bot.types';
 import {
-  NO_BIBA_TO_REROLL, NO_BIBA_TO_BUY,
+  NO_BIBA_TO_REROLL, NO_BIBA_TO_BUY, BibacoinAction,
 } from '../types/services/bibacoin.service.types';
 import {
   getProductPrice, getProductsList, getProductActionContext, getActionByProduct,
@@ -46,12 +46,13 @@ export default class ShopService extends BaseService {
 
     return ctx.reply(
       'За бибакоины можно купить:',
-      Markup.inlineKeyboard(
-        list.map((product) => [Markup.callbackButton(
+      Markup.inlineKeyboard([
+        ...list.map((product) => [Markup.callbackButton(
           getProductActionContext(product),
           getActionByProduct(product),
         )]),
-      ).extra(),
+        [Markup.callbackButton('Проверить баланс', BibacoinAction.BALANCE)],
+      ]).extra(),
     );
   }
 
