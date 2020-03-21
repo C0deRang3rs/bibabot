@@ -19,6 +19,7 @@ import { Product } from '../types/services/shop.service.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
+import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -57,6 +58,21 @@ export default class BibaService extends BaseService {
          + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
   }
 
+  @DeleteResponseMessage(10000)
+  private static async sendRerollBlockedMessage(ctx: ContextMessageUpdate, username: string): Promise<Message> {
+    const price = getProductPrice(Product.BIBA_REROLL);
+    await ctx.deleteMessage();
+    return ctx.reply(
+      `${username} сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
+      Markup.inlineKeyboard(
+        [Markup.callbackButton(
+          `Перемерять бибу 💰${price}¢`,
+          getActionByProduct(Product.BIBA_REROLL),
+        )],
+      ).extra(),
+    );
+  }
+
   public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<Message> {
     const user = (ctx.message && ctx.message!.from) || ctx.from;
     const username = user!.username ? `@${user!.username}` : `${user!.first_name} ${user!.last_name}`;
@@ -66,16 +82,7 @@ export default class BibaService extends BaseService {
 
     if (lastBiba) {
       if (!lastBiba.outdated && !forceReroll) {
-        const price = getProductPrice(Product.BIBA_REROLL);
-        return ctx.reply(
-          `Ты сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
-          Markup.inlineKeyboard(
-            [Markup.callbackButton(
-              `Перемерять бибу 💰${price}¢`,
-              getActionByProduct(Product.BIBA_REROLL),
-            )],
-          ).extra(),
-        );
+        return BibaService.sendRerollBlockedMessage(ctx, username);
       }
 
       bibaMessage = `У ${username} биба ${biba} см, в прошлый раз была ${lastBiba.size} см. `
