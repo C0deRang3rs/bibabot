@@ -57,7 +57,6 @@ export default class BibaService extends BaseService {
          + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
   }
 
-  @DeleteRequestMessage()
   public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<Message> {
     const user = (ctx.message && ctx.message!.from) || ctx.from;
     const username = user!.username ? `@${user!.username}` : `${user!.first_name} ${user!.last_name}`;
