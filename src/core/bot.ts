@@ -1,6 +1,7 @@
 import Telegraf, { ContextMessageUpdate } from 'telegraf';
 import { MessageSubTypes } from 'telegraf/typings/telegram-types';
 import { TelegrafFull, BotListener, BotEvent } from '../types/core/bot.types';
+import getUsernameFromContext from '../utils/global.helper';
 
 export default class Bot {
   private static instance: Bot;
@@ -26,9 +27,8 @@ export default class Bot {
   }
 
   private static logger(ctx: ContextMessageUpdate, next: Function, commandName: string): Function {
-    const user = (ctx.message && ctx.message!.from) || ctx.from!;
     const chat = ctx.chat!;
-    const username = user!.username ? `@${user!.username}` : `${user!.first_name} ${user!.last_name}`;
+    const username = getUsernameFromContext(ctx);
     const message = (ctx.message && ctx.message!.text) || ctx.match;
 
     if (commandName !== BotEvent.MESSAGE) {

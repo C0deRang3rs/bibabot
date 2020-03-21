@@ -20,6 +20,7 @@ import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
+import getUsernameFromContext from '../utils/global.helper';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -44,7 +45,7 @@ export default class BibaService extends BaseService {
 
   @DeleteRequestMessage()
   private static async unrankedBibaMetr(ctx: ContextMessageUpdate): Promise<Message> {
-    const username = `@${ctx.message!.from!.username}` || ctx.message!.from!.first_name;
+    const username = getUsernameFromContext(ctx);
     return ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
   }
 
@@ -74,8 +75,8 @@ export default class BibaService extends BaseService {
   }
 
   public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<Message> {
-    const user = (ctx.message && ctx.message!.from) || ctx.from;
-    const username = user!.username ? `@${user!.username}` : `${user!.first_name} ${user!.last_name}`;
+    const user = (ctx.message && ctx.message!.from!) || ctx.from!;
+    const username = getUsernameFromContext(ctx);
     const biba = Math.floor(Math.random() * (35 + 1));
     const lastBiba = await this.bibaRepo.getBibaByIds(ctx.chat!.id, user!.id);
     let bibaMessage = `У ${username} биба ${biba} см`;
