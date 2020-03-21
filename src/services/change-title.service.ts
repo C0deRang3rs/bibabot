@@ -1,15 +1,19 @@
 import { ContextMessageUpdate } from 'telegraf';
 import zipObject from 'lodash.zipobject';
 import Bull from 'bull';
+import { Message } from 'telegraf/typings/telegram-types';
 import GenerateNameUtil from '../utils/generate-name.util';
 import { ChangeTitleCommandType } from '../types/globals/commands.types';
 import { TimerUnits } from '../types/services/change-title.service.types';
 import Bot from '../core/bot';
 import { BotCommandType } from '../types/core/bot.types';
 import TimerRepository from '../repositories/timer.repo';
+import BaseService from './base.service';
+import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
+import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 
-export default class ChangeTitleService {
-  private static instance: ChangeTitleService;
+export default class ChangeTitleService extends BaseService {
+  protected static instance: ChangeTitleService;
   private iterationUnits = TimerUnits.HOURS;
   private iterationTime = 12;
 
@@ -26,16 +30,14 @@ export default class ChangeTitleService {
   }
 
   private constructor(
-    private readonly bot: Bot,
     private readonly timerRepo: TimerRepository,
   ) {
-    this.initListeners();
+    super();
   }
 
   public static getInstance(): ChangeTitleService {
     if (!ChangeTitleService.instance) {
       ChangeTitleService.instance = new ChangeTitleService(
-        Bot.getInstance(),
         new TimerRepository(),
       );
     }
@@ -70,7 +72,9 @@ export default class ChangeTitleService {
     done();
   }
 
-  public async onIterationChange(ctx: ContextMessageUpdate): Promise<void> {
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(5000)
+  public async onIterationChange(ctx: ContextMessageUpdate): Promise<Message> {
     const commandData = ctx.message!.text!.split(' ');
 
     switch (commandData[2]) {
@@ -80,48 +84,45 @@ export default class ChangeTitleService {
       case 'minutes':
         this.iterationUnits = TimerUnits.MINUTES;
         break;
-      default: await ctx.reply('Wrong time format, try something like: 2 hours, 5 minutes, 1 hours (lmao)'); return;
+      default: return ctx.reply('Wrong time format, try something like: 2 hours, 5 minutes, 1 hours (lmao)');
     }
 
     const newIterationTime = parseInt(commandData[1], 10);
 
     if (!new RegExp(/^\d+$/).test(commandData[1]) || newIterationTime <= 0) {
-      await ctx.reply('Время может содержать только числа больше 1');
-      return;
+      return ctx.reply('Время может содержать только числа больше 1');
     }
 
     if (commandData[1].length > 3) {
-      await ctx.reply('Время не может быть больше 999');
-      return;
+      return ctx.reply('Время не может быть больше 999');
     }
 
     this.iterationTime = newIterationTime;
 
     console.log(`[${ctx.chat!.id}] Interval - ${this.iterationTime}, units - ${this.iterationUnits}`);
-    await ctx.reply('Iteration interval changed');
+    return ctx.reply('Iteration interval changed');
   }
 
-  public async onStart(ctx: ContextMessageUpdate): Promise<void> {
-    if (!ctx.chat) return;
-
-    const chatId = ctx.chat.id;
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(10000)
+  public async onStart(ctx: ContextMessageUpdate): Promise<Message> {
+    const chatId = ctx.chat!.id;
     const isTimerActive = await this.timerRepo.getTimerByChatId(chatId);
 
     if (isTimerActive) {
-      await ctx.reply('Уже запущен.');
-      return;
+      return ctx.reply('Уже запущен.');
     }
 
-    await ctx.reply(`Ща как буду раз в ${this.iterationTime} ${this.unitsName} имена менять`);
     await this.changeTitle(chatId);
     await this.timerRepo.setTimerByChatId(chatId, new Date());
+    return ctx.reply(`Ща как буду раз в ${this.iterationTime} ${this.unitsName} имена менять`);
   }
 
-  public async onStop(ctx: ContextMessageUpdate): Promise<void> {
-    if (!ctx.chat) return;
-
-    await this.timerRepo.removeTimer(ctx.chat.id);
-    await ctx.reply('Всё, больше не буду');
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(10000)
+  public async onStop(ctx: ContextMessageUpdate): Promise<Message> {
+    await this.timerRepo.removeTimer(ctx.chat!.id);
+    return ctx.reply('Всё, больше не буду');
   }
 
   public async onRename(ctx: ContextMessageUpdate): Promise<void> {
@@ -131,17 +132,17 @@ export default class ChangeTitleService {
     console.log(`[${ctx.chat.id}] Renamed`);
   }
 
-  private initListeners(): void {
+  protected initListeners(): void {
     this.bot.addListeners([
       {
         type: BotCommandType.COMMAND,
         name: ChangeTitleCommandType.START_RENAME,
-        callback: (ctx): Promise<void> => this.onStart(ctx),
+        callback: (ctx): Promise<Message> => this.onStart(ctx),
       },
       {
         type: BotCommandType.COMMAND,
         name: ChangeTitleCommandType.STOP_RENAME,
-        callback: (ctx): Promise<void> => this.onStop(ctx),
+        callback: (ctx): Promise<Message> => this.onStop(ctx),
       },
       {
         type: BotCommandType.COMMAND,
@@ -151,7 +152,7 @@ export default class ChangeTitleService {
       {
         type: BotCommandType.COMMAND,
         name: ChangeTitleCommandType.ITERATION_CHANGE,
-        callback: (ctx): Promise<void> => this.onIterationChange(ctx),
+        callback: (ctx): Promise<Message> => this.onIterationChange(ctx),
       },
     ]);
   }

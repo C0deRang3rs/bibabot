@@ -1,25 +1,26 @@
 import { ContextMessageUpdate } from 'telegraf';
+import { Message } from 'telegraf/typings/telegram-types';
 import { BotEvent, BotCommandType } from '../types/core/bot.types';
-import Bot from '../core/bot';
 import BibacoinService from './bibacoin.service';
 import TrashService from './trash.service';
 import { GlobalCommand } from '../types/globals/commands.types';
 import ChatRepository from '../repositories/chat.repo';
+import BaseService from './base.service';
+import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
+import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 
-export default class GlobalService {
+export default class GlobalService extends BaseService {
   private static instance: GlobalService;
 
   private constructor(
-    private readonly bot: Bot,
     private readonly chatRepo: ChatRepository,
   ) {
-    this.initListeners();
+    super();
   }
 
   public static getInstance(): GlobalService {
     if (!GlobalService.instance) {
       GlobalService.instance = new GlobalService(
-        Bot.getInstance(),
         new ChatRepository(),
       );
     }
@@ -35,44 +36,46 @@ export default class GlobalService {
     );
   }
 
-  private initListeners(): void {
+  protected initListeners(): void {
     this.bot.addListeners([
       {
         type: BotCommandType.COMMAND,
         name: GlobalCommand.START,
-        callback: (ctx): Promise<void> => this.onStart(ctx),
+        callback: (ctx): Promise<Message> => this.onStart(ctx),
       },
       {
         type: BotCommandType.COMMAND,
         name: GlobalCommand.STOP,
-        callback: (ctx): Promise<void> => this.onStop(ctx),
+        callback: (ctx): Promise<Message> => this.onStop(ctx),
       },
     ]);
   }
 
-  private async onStart(ctx: ContextMessageUpdate): Promise<void> {
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(10000)
+  private async onStart(ctx: ContextMessageUpdate): Promise<Message> {
     const chatId = ctx.chat!.id;
     const chat = await this.chatRepo.getChat(chatId);
 
     if (chat) {
-      await ctx.reply('Этот чат уже активирован');
-      return;
+      return ctx.reply('Этот чат уже активирован');
     }
 
     await this.chatRepo.addChat(ctx.chat!.id);
-    await ctx.reply('Вечер в хату');
+    return ctx.reply('Вечер в хату');
   }
 
-  private async onStop(ctx: ContextMessageUpdate): Promise<void> {
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(10000)
+  private async onStop(ctx: ContextMessageUpdate): Promise<Message> {
     const chatId = ctx.chat!.id;
     const chat = await this.chatRepo.getChat(chatId);
 
     if (!chat) {
-      await ctx.reply('Это чат для меня не активирован');
-      return;
+      return ctx.reply('Это чат для меня не активирован');
     }
 
     await this.chatRepo.removeChat(chatId);
-    await ctx.reply('Мама, я не хочу умирать');
+    return ctx.reply('Мама, я не хочу умирать');
   }
 }

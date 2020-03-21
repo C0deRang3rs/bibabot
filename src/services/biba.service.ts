@@ -1,6 +1,7 @@
 import Bull from 'bull';
 import { ContextMessageUpdate, Markup } from 'telegraf';
 
+import { Message } from 'telegraf/typings/telegram-types';
 import { BibaCommand } from '../types/globals/commands.types';
 import { getProductPrice, getActionByProduct } from '../utils/shop.helper';
 import {
@@ -15,22 +16,23 @@ import { BotCommandType } from '../types/core/bot.types';
 import BibaRepository from '../repositories/biba.repo';
 import ChatRepository from '../repositories/chat.repo';
 import { Product } from '../types/services/shop.service.types';
+import BaseService from './base.service';
+import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
+import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 
-export default class BibaService {
+export default class BibaService extends BaseService {
   private static instance: BibaService;
 
   private constructor(
-    private readonly bot: Bot,
     private readonly bibaRepo: BibaRepository,
     private readonly chatRepo: ChatRepository,
   ) {
-    this.initListeners();
+    super();
   }
 
   public static getInstance(): BibaService {
     if (!BibaService.instance) {
       BibaService.instance = new BibaService(
-        Bot.getInstance(),
         new BibaRepository(),
         new ChatRepository(),
       );
@@ -39,9 +41,11 @@ export default class BibaService {
     return BibaService.instance;
   }
 
-  private static async unrankedBibaMetr(ctx: ContextMessageUpdate): Promise<void> {
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(5000)
+  private static async unrankedBibaMetr(ctx: ContextMessageUpdate): Promise<Message> {
     const username = `@${ctx.message!.from!.username}` || ctx.message!.from!.first_name;
-    await ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
+    return ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
   }
 
   private static getDailyMessage(allBibas: Array<Biba>): string {
@@ -54,7 +58,8 @@ export default class BibaService {
          + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
   }
 
-  public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<void> {
+  @DeleteRequestMessage()
+  public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<Message> {
     const user = (ctx.message && ctx.message!.from) || ctx.from;
     const username = user!.username ? `@${user!.username}` : `${user!.first_name} ${user!.last_name}`;
     const biba = Math.floor(Math.random() * (35 + 1));
@@ -64,7 +69,7 @@ export default class BibaService {
     if (lastBiba) {
       if (!lastBiba.outdated && !forceReroll) {
         const price = getProductPrice(Product.BIBA_REROLL);
-        await ctx.reply(
+        return ctx.reply(
           `Ты сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
           Markup.inlineKeyboard(
             [Markup.callbackButton(
@@ -73,7 +78,6 @@ export default class BibaService {
             )],
           ).extra(),
         );
-        return;
       }
 
       bibaMessage = `У ${username} биба ${biba} см, в прошлый раз была ${lastBiba.size} см. `
@@ -90,7 +94,7 @@ export default class BibaService {
       },
     );
 
-    await ctx.reply(bibaMessage);
+    return ctx.reply(bibaMessage);
   }
 
   public async dailyBiba(done: Bull.DoneCallback): Promise<void> {
@@ -119,35 +123,36 @@ export default class BibaService {
     done();
   }
 
-  private initListeners(): void {
+  protected initListeners(): void {
     this.bot.addListeners([
       {
         type: BotCommandType.COMMAND,
         name: BibaCommand.BIBA,
-        callback: (ctx): Promise<void> => this.bibaMetr(ctx),
+        callback: (ctx): Promise<Message> => this.bibaMetr(ctx),
       },
       {
         type: BotCommandType.COMMAND,
         name: BibaCommand.UNRANKED_BIBA,
-        callback: (ctx): Promise<void> => BibaService.unrankedBibaMetr(ctx),
+        callback: (ctx): Promise<Message> => BibaService.unrankedBibaMetr(ctx),
       },
       {
         type: BotCommandType.COMMAND,
         name: BibaCommand.BIBA_TABLE,
-        callback: (ctx): Promise<void> => this.bibaTable(ctx),
+        callback: (ctx): Promise<Message> => this.bibaTable(ctx),
       },
     ]);
   }
 
-  private async bibaTable(ctx: ContextMessageUpdate): Promise<void> {
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(10000)
+  private async bibaTable(ctx: ContextMessageUpdate): Promise<Message> {
     const allBibas = await this.bibaRepo.getAllBibasByChatId(ctx.chat!.id);
 
     if (!allBibas.length) {
-      await ctx.reply(NO_TABLE_DATA);
-      return;
+      return ctx.reply(NO_TABLE_DATA);
     }
 
     const message = allBibas.map((biba, index) => `${index + 1}. ${biba.username.replace('@', '')} - ${biba.size} см`);
-    ctx.reply(message.join('\n'));
+    return ctx.reply(message.join('\n'));
   }
 }
