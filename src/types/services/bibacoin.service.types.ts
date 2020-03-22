@@ -6,6 +6,10 @@ export enum BibacoinActivity {
   VIDEO = 'VIDEO',
 }
 
+export enum BibacoinAction {
+  BALANCE = 'balance',
+}
+
 export const BibacoinCredit: Record<BibacoinActivity, number> = {
   [BibacoinActivity.MESSAGE]: 0.5,
   [BibacoinActivity.PHOTO]: 1.5,

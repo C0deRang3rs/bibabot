@@ -12,7 +12,6 @@ export enum BibaCommand {
 }
 
 export enum BibacoinCommand {
-  BALANCE = 'balance',
   INCOME_LIST = 'income_list',
   SET_BALANCE = 'set_balance',
 }

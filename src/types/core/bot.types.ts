@@ -14,7 +14,7 @@ export enum BotCommandType {
 export interface BotListener {
   type: BotCommandType;
   name: MessageSubTypes | string;
-  callback(ctx: ContextMessageUpdate): void;
+  callback(ctx: ContextMessageUpdate): Promise<void | object>;
 }
 
 export interface TelegramFull extends Telegram {
