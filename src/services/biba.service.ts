@@ -62,7 +62,7 @@ export default class BibaService extends BaseService {
   @DeleteResponseMessage(10000)
   private static async sendRerollBlockedMessage(ctx: ContextMessageUpdate, username: string): Promise<Message> {
     const price = getProductPrice(Product.BIBA_REROLL);
-    await ctx.deleteMessage();
+
     return ctx.reply(
       `${username} сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
       Markup.inlineKeyboard(
