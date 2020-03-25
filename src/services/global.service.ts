@@ -40,15 +40,12 @@ export default class GlobalService extends BaseService {
     this.bot.addListeners([
       {
         type: BotCommandType.COMMAND,
-        name: GlobalCommand.START,
-        callback: (ctx): Promise<Message> => this.onStart(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
         name: GlobalCommand.STOP,
         callback: (ctx): Promise<Message> => this.onStop(ctx),
       },
     ]);
+
+    this.bot.app.start((ctx) => this.onStart(ctx));
   }
 
   @DeleteRequestMessage()
