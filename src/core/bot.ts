@@ -28,6 +28,7 @@ export default class Bot {
 
   public static logger(ctx: ContextMessageUpdate, next?: Function, commandName?: string): Function {
     const chat = ctx.chat!;
+
     const username = getUsernameFromContext(ctx);
     const message = (ctx.message && ctx.message!.text) || ctx.match;
 
