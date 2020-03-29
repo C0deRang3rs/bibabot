@@ -74,6 +74,7 @@ export default class BibaService extends BaseService {
     );
   }
 
+  @DeleteRequestMessage()
   public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<Message> {
     const user = (ctx.message && ctx.message!.from!) || ctx.from!;
     const username = getUsernameFromContext(ctx);

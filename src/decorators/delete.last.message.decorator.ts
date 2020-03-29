@@ -1,7 +1,9 @@
 import { ContextMessageUpdate } from 'telegraf';
 import { Message } from 'telegraf/typings/telegram-types';
 import Bot from '../core/bot';
-import Redis from '../core/redis';
+import LastMessageRepository from '../repositories/last.message.repo';
+
+const lastMessageRepo = new LastMessageRepository();
 
 const DeleteLastMessage = (prefix: string) => (_target: object, _propKey: string, desc: PropertyDescriptor): void => {
   const method: Function = desc.value;
@@ -9,17 +11,18 @@ const DeleteLastMessage = (prefix: string) => (_target: object, _propKey: string
   // eslint-disable-next-line no-param-reassign
   desc.value = async function wrapped(...args: ContextMessageUpdate[]): Promise<void> {
     const message: Message = await method.apply(this, args);
-    const lastMessage = await Redis.getInstance().client.getAsync(`last:message:${prefix}:${message.chat!.id}`);
+    const chatId = message.chat!.id;
+    const lastMessage = await lastMessageRepo.getLastMessage(prefix, chatId);
 
     if (lastMessage) {
       try {
-        await Bot.getInstance().app.telegram.deleteMessage(message.chat!.id, parseInt(lastMessage, 10));
+        await Bot.getInstance().app.telegram.deleteMessage(message.chat!.id, lastMessage);
       } catch (err) {
         Bot.handleError(err);
       }
     }
 
-    await Redis.getInstance().client.setAsync(`last:message:${prefix}:${message.chat!.id}`, message.message_id.toString());
+    await lastMessageRepo.setLastMessage(prefix, chatId, message.message_id);
   };
 };
 

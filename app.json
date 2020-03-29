@@ -1,0 +1,10 @@
+{
+  "environments": {
+    "test": {
+      "scripts": {
+        "test-setup": "npm i jest @types/jest ts-jest",
+        "test": "npm run predeploy"
+      }
+    }
+  }
+}

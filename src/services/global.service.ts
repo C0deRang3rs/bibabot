@@ -8,6 +8,7 @@ import ChatRepository from '../repositories/chat.repo';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
+import Bot from '../core/bot';
 
 export default class GlobalService extends BaseService {
   private static instance: GlobalService;
@@ -40,15 +41,15 @@ export default class GlobalService extends BaseService {
     this.bot.addListeners([
       {
         type: BotCommandType.COMMAND,
-        name: GlobalCommand.START,
-        callback: (ctx): Promise<Message> => this.onStart(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
         name: GlobalCommand.STOP,
         callback: (ctx): Promise<Message> => this.onStop(ctx),
       },
     ]);
+
+    this.bot.app.start(
+      Bot.logger,
+      (ctx: ContextMessageUpdate) => this.onStart(ctx),
+    );
   }
 
   @DeleteRequestMessage()

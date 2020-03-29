@@ -26,16 +26,17 @@ export default class Bot {
     console.error(err);
   }
 
-  private static logger(ctx: ContextMessageUpdate, next: Function, commandName: string): Function {
+  public static logger(ctx: ContextMessageUpdate, next?: Function, commandName?: string): Function {
     const chat = ctx.chat!;
+
     const username = getUsernameFromContext(ctx);
     const message = (ctx.message && ctx.message!.text) || ctx.match;
 
     if (commandName !== BotEvent.MESSAGE) {
-      console.log(`[${chat.id}] ${chat.title} from user ${username} - ${message}`);
+      console.log(`[${chat.id}] ${chat.title || 'Personal message'} from user ${username} - ${message}`);
     }
 
-    return next();
+    return next!();
   }
 
   public addListeners(list: Array<BotListener>): void {
