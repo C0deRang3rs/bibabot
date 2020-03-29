@@ -48,5 +48,6 @@
     "jest": "25.2.3",
     "ts-jest": "25.2.1",
     "tsc-watch": "^4.2.3"
-  }
+  },
+  "eslintIgnore": ["__tests__/*"]
 }
