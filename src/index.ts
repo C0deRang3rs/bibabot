@@ -1,4 +1,3 @@
-import { config } from 'dotenv';
 import Server from './core/server';
 import Queue from './core/queue';
 import TrashService from './services/trash.service';
@@ -9,8 +8,6 @@ import Redis from './core/redis';
 import Bot from './core/bot';
 import ShopService from './services/shop.service';
 import GlobalService from './services/global.service';
-
-if (process.env.CLOUD !== 'true') config();
 
 // CORE
 Redis.getInstance();
