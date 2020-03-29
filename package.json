@@ -8,7 +8,8 @@
     "postinstall": "tsc",
     "watch": "tsc-watch --onSuccess 'node --require dotenv/config dist/index.js'",
     "lint": "./node_modules/.bin/eslint --ext .ts ./ --fix",
-    "test": "./node_modules/.bin/jest --silent"
+    "test": "./node_modules/.bin/jest --silent",
+    "predeploy": "npm run lint && npm run test"
   },
   "author": "",
   "license": "ISC",

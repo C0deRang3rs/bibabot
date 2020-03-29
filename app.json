@@ -3,7 +3,7 @@
     "test": {
       "scripts": {
         "test-setup": "npm i jest @types/jest ts-jest",
-        "test": "npm run test"
+        "test": "npm run predeploy"
       }
     }
   }
