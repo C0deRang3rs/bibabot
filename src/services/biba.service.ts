@@ -3,13 +3,14 @@ import { ContextMessageUpdate, Markup } from 'telegraf';
 
 import { Message } from 'telegraf/typings/telegram-types';
 import { BibaCommand } from '../types/globals/commands.types';
-import { getProductPrice, getActionByProduct } from '../utils/shop.helper';
+import { getProductPrice, getActionByProduct, getPriceByActivity } from '../utils/shop.helper';
 import {
   Biba,
   POSITIVE_BIBA,
   NEGATIVE_BIBA,
   NO_TABLE_DATA,
   NO_BIBA_MEASURED,
+  SAME_BIBA,
 } from '../types/services/biba.service.types';
 import Bot from '../core/bot';
 import { BotCommandType } from '../types/core/bot.types';
@@ -21,6 +22,8 @@ import DeleteRequestMessage from '../decorators/delete.request.message.decorator
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 import getUsernameFromContext from '../utils/global.helper';
+import BibacoinService from './bibacoin.service';
+import { BibacoinActivity } from '../types/services/bibacoin.service.types';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -28,6 +31,7 @@ export default class BibaService extends BaseService {
   private constructor(
     private readonly bibaRepo: BibaRepository,
     private readonly chatRepo: ChatRepository,
+    private readonly bibacoinService: BibacoinService,
   ) {
     super();
   }
@@ -37,6 +41,7 @@ export default class BibaService extends BaseService {
       BibaService.instance = new BibaService(
         new BibaRepository(),
         new ChatRepository(),
+        BibacoinService.getInstance(),
       );
     }
 
@@ -74,32 +79,49 @@ export default class BibaService extends BaseService {
     );
   }
 
+  private static getNewBibaMessage(oldSize: number, newSize: number): string {
+    const diff = oldSize - newSize;
+
+    if (diff === 0) return SAME_BIBA;
+    return oldSize - newSize > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA;
+  }
+
   @DeleteRequestMessage()
   public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<Message> {
     const user = (ctx.message && ctx.message!.from!) || ctx.from!;
     const username = getUsernameFromContext(ctx);
+    const userId = user.id;
+    const chatId = ctx.chat!.id;
     const biba = Math.floor(Math.random() * (35 + 1));
-    const lastBiba = await this.bibaRepo.getBibaByIds(ctx.chat!.id, user!.id);
-    let bibaMessage = `У ${username} биба ${biba} см`;
+    const lastBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
+    let bibaMessage = `У ${username} биба ${biba} см.`;
 
     if (lastBiba) {
       if (!lastBiba.outdated && !forceReroll) {
         return BibaService.sendRerollBlockedMessage(ctx, username);
       }
 
-      bibaMessage = `У ${username} биба ${biba} см, в прошлый раз была ${lastBiba.size} см. `
-                  + `${biba - lastBiba.size > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA}`;
+      bibaMessage = `${bibaMessage} В прошлый раз была ${lastBiba.size} см. `
+                  + `${BibaService.getNewBibaMessage(biba, lastBiba.size)}`;
     }
 
     await this.bibaRepo.setBiba(
-      ctx.chat!.id,
+      chatId,
       {
         size: biba,
         username,
         outdated: false,
-        userId: user!.id,
+        userId,
       },
     );
+
+    if (biba <= 5) {
+      const price = getPriceByActivity(BibacoinActivity.SMALL_PEPE);
+      await this.bibacoinService.addCoins(userId, chatId, price);
+      bibaMessage = `${bibaMessage} Не переживай, Фонд Поддержки Неполноценных выделил тебе ${price} бибакоинов`;
+    } else if (biba >= 30) {
+      bibaMessage = `${bibaMessage} Дорогу здоровяку`;
+    }
 
     return ctx.reply(bibaMessage);
   }

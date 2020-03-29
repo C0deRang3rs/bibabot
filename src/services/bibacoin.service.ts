@@ -47,15 +47,18 @@ export default class BibacoinService extends BaseService {
 
     const chatId = ctx.chat!.id;
     const userId = ctx.message.from!.id;
-
-    const currentBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, userId);
     const messagePrice = getPriceByMessage(ctx.message);
-    const newBalance = currentBalance + messagePrice;
 
-    await this.bibacoinRepo.setBibacoinBalance(chatId, userId, newBalance);
+    await this.addCoins(userId, chatId, messagePrice);
 
     return next!();
   };
+
+  public async addCoins(userId: number, chatId: number, value: number): Promise<void> {
+    const currentBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, userId);
+    const newBalance = currentBalance + value;
+    await this.bibacoinRepo.setBibacoinBalance(chatId, userId, newBalance);
+  }
 
   public async hasEnoughCredits(userId: number, chatId: number, value: number): Promise<boolean> {
     const currentBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, userId);
