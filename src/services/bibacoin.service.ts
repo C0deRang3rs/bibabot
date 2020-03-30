@@ -3,7 +3,7 @@ import { Message } from 'telegraf/typings/telegram-types';
 import {
   ZERO_BALANCE, BibacoinAction,
 } from '../types/services/bibacoin.service.types';
-import { BibacoinCommand } from '../types/globals/commands.types';
+import { BibacoinCommand, BibacoinDebugCommand } from '../types/globals/commands.types';
 import {
   getPriceByMessage,
   getActivitiesList,
@@ -95,7 +95,7 @@ export default class BibacoinService extends BaseService {
 
     if (process.env.PRODUCTION === 'false') {
       commands.push(
-        { type: BotCommandType.COMMAND, name: BibacoinCommand.SET_BALANCE, callback: (ctx) => this.setBalance(ctx) },
+        { type: BotCommandType.COMMAND, name: BibacoinDebugCommand.SET_BALANCE, callback: (ctx) => this.setBalance(ctx) },
       );
     }
 
@@ -103,7 +103,7 @@ export default class BibacoinService extends BaseService {
   }
 
   private async setBalance(ctx: ContextMessageUpdate): Promise<Message> {
-    const balance = ctx.message!.text!.split(BibacoinCommand.SET_BALANCE)[1].trim();
+    const balance = ctx.message!.text!.split(BibacoinDebugCommand.SET_BALANCE)[1].trim();
 
     if (!balance) {
       return ctx.reply('Укажи сколько надо');

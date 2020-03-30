@@ -11,8 +11,17 @@ export enum BibaCommand {
   BIBA_TABLE = 'biba_table',
 }
 
+export enum BibaDebugCommand {
+  REMOVE_BIBA = 'remove_biba',
+  SET_BIBA = 'set_biba',
+  TRIGGER_DAILY = 'trigger_daily',
+}
+
 export enum BibacoinCommand {
   INCOME_LIST = 'income_list',
+}
+
+export enum BibacoinDebugCommand {
   SET_BALANCE = 'set_balance',
 }
 

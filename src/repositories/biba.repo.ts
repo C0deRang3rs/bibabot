@@ -35,4 +35,8 @@ export default class BibaRepository extends BaseRepository {
       await this.setBiba(chatId, { ...biba, outdated: true });
     }));
   }
+
+  public async removeBiba(chatId: number, userId: number): Promise<void> {
+    await this.redis.delAsync(`${this.entityName}:${chatId}:${userId}`);
+  }
 }
