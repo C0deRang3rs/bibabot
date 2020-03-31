@@ -8,7 +8,8 @@ import { FUCK_TRIGGERS, CoinSide } from '../types/services/trash.service.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
-import getUsernameFromContext from '../utils/global.helper';
+import GlobalHelper from '../utils/global.helper';
+import getUsernameFromContext from '../utils/global.util';
 
 export default class TrashService extends BaseService {
   private static instance: TrashService;
@@ -47,11 +48,8 @@ export default class TrashService extends BaseService {
 
   @DeleteRequestMessage()
   private static async roll(ctx: ContextMessageUpdate): Promise<Message> {
-    if (!ctx.message || !ctx.message.text) {
-      return ctx.reply('Empty message');
-    }
     const username = getUsernameFromContext(ctx);
-    const payload = ctx.message.text.split(' ')[1];
+    const payload = ctx.message!.text!.split(' ')[1];
 
     let from = 1;
     let to = 100;
@@ -63,11 +61,11 @@ export default class TrashService extends BaseService {
       const max = parseInt(parameters[1], 10);
 
       if (!min || !max) {
-        return ctx.reply('Wrong format');
+        return GlobalHelper.sendError(ctx, 'Wrong format');
       }
 
       if (!Number.isInteger(min) || !Number.isInteger(max)) {
-        return ctx.reply('Wrong data given');
+        return GlobalHelper.sendError(ctx, 'Wrong data');
       }
 
       from = min;

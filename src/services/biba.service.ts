@@ -21,9 +21,10 @@ import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
-import getUsernameFromContext from '../utils/global.helper';
 import BibacoinService from './bibacoin.service';
 import { BibacoinActivity } from '../types/services/bibacoin.service.types';
+import getUsernameFromContext from '../utils/global.util';
+import GlobalHelper from '../utils/global.helper';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -175,6 +176,11 @@ export default class BibaService extends BaseService {
         name: BibaCommand.BIBA_TABLE,
         callback: (ctx): Promise<Message> => this.bibaTable(ctx),
       },
+      {
+        type: BotCommandType.COMMAND,
+        name: BibaCommand.SELL_BIBA,
+        callback: (ctx): Promise<Message> => this.sellBiba(ctx),
+      },
     ];
 
     if (process.env.PRODUCTION === 'false') {
@@ -200,12 +206,38 @@ export default class BibaService extends BaseService {
     this.bot.addListeners(commands);
   }
 
+  @DeleteRequestMessage()
+  private async sellBiba(ctx: ContextMessageUpdate): Promise<Message> {
+    const chatId = ctx.chat!.id;
+    const userId = ctx.from!.id;
+    const username = getUsernameFromContext(ctx);
+    const params = ctx.message!.text!.split(' ');
+    const count = parseInt(params[1], 10);
+
+    if (!count) {
+      return GlobalHelper.sendError(ctx, 'Wrong format');
+    }
+
+    const biba = await this.bibaRepo.getBibaByIds(chatId, userId);
+    const newSize = biba.size - count;
+
+    if (newSize < 0) {
+      return GlobalHelper.sendError(ctx, 'Ты не можешь продать больше, чем отрастил');
+    }
+
+    await this.bibaRepo.setBiba(chatId, { ...biba, size: newSize });
+    const cost = count * getPriceByActivity(BibacoinActivity.BIBA_CM);
+    await this.bibacoinService.addCoins(userId, chatId, cost);
+
+    return ctx.reply(`У ${username} отрезали ${count} см бибы, но взамен он получил ${cost} бибакоинов`);
+  }
+
   private async removeBiba(ctx: ContextMessageUpdate): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
 
     if (params.length < 1 || params.length > 2) {
-      return ctx.reply('Wrong format');
+      return GlobalHelper.sendError(ctx, 'Wrong format');
     }
 
     const targetUsername = params[1];
@@ -215,12 +247,12 @@ export default class BibaService extends BaseService {
       const targetBiba = bibas.find((biba) => biba.username === targetUsername);
 
       if (!targetBiba) {
-        return ctx.reply('Wrong user');
+        return GlobalHelper.sendError(ctx, 'Wrong user');
       }
 
       await this.bibaRepo.removeBiba(chatId, targetBiba.userId);
     } else if (targetUsername && !targetUsername.includes('@')) {
-      return ctx.reply('Wrong format');
+      return GlobalHelper.sendError(ctx, 'Wrong format');
     } else {
       await this.bibaRepo.removeBiba(chatId, ctx.from!.id);
     }
@@ -233,7 +265,7 @@ export default class BibaService extends BaseService {
     const chatId = ctx.chat!.id;
 
     if (params.length < 2 || params.length > 3) {
-      return ctx.reply('Wrong format');
+      return GlobalHelper.sendError(ctx, 'Wrong format');
     }
 
     const size = parseInt(params[1], 10);
@@ -244,12 +276,12 @@ export default class BibaService extends BaseService {
       const targetBiba = bibas.find((biba) => biba.username === targetUsername);
 
       if (!targetBiba) {
-        return ctx.reply('Wrong user');
+        return GlobalHelper.sendError(ctx, 'Wrong user');
       }
 
       await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
     } else if (targetUsername && !targetUsername.includes('@')) {
-      return ctx.reply('Wrong format');
+      return GlobalHelper.sendError(ctx, 'Wrong format');
     } else {
       const targetBiba = await this.bibaRepo.getBibaByIds(chatId, ctx.from!.id);
 

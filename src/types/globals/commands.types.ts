@@ -9,6 +9,7 @@ export enum BibaCommand {
   BIBA = 'biba',
   UNRANKED_BIBA = 'unbiba',
   BIBA_TABLE = 'biba_table',
+  SELL_BIBA = 'sell_biba',
 }
 
 export enum BibaDebugCommand {

@@ -9,8 +9,8 @@ export enum ShopAction {
 }
 
 export const ProductPrice: Record<Product, number> = {
-  [Product.BIBA_CM]: 15,
-  [Product.BIBA_REROLL]: 50,
+  [Product.BIBA_CM]: 10,
+  [Product.BIBA_REROLL]: 30,
 };
 
 export const ProductToActionMap: Record<Product, ShopAction> = {
