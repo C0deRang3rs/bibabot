@@ -20,6 +20,7 @@ export enum BibaDebugCommand {
 
 export enum BibacoinCommand {
   INCOME_LIST = 'income_list',
+  GIVE = 'give',
 }
 
 export enum BibacoinDebugCommand {

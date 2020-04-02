@@ -219,10 +219,15 @@ export default class BibaService extends BaseService {
     }
 
     const biba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
+    if (!biba) {
+      return GlobalHelper.sendError(ctx, `${username} у тебя нет бибы`);
+    }
+
     const newSize = biba.size - count;
 
     if (newSize < 0) {
-      return GlobalHelper.sendError(ctx, 'Ты не можешь продать больше, чем отрастил');
+      return GlobalHelper.sendError(ctx, `${username} ты не можешь продать больше, чем отрастил`);
     }
 
     await this.bibaRepo.setBiba(chatId, { ...biba, size: newSize });
@@ -243,8 +248,7 @@ export default class BibaService extends BaseService {
     const targetUsername = params[1];
 
     if (targetUsername && targetUsername.includes('@')) {
-      const bibas = await this.bibaRepo.getAllBibasByChatId(chatId);
-      const targetBiba = bibas.find((biba) => biba.username === targetUsername);
+      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
 
       if (!targetBiba) {
         return GlobalHelper.sendError(ctx, 'Wrong user');
@@ -272,8 +276,7 @@ export default class BibaService extends BaseService {
     const targetUsername = params[2];
 
     if (targetUsername && targetUsername.includes('@')) {
-      const bibas = await this.bibaRepo.getAllBibasByChatId(chatId);
-      const targetBiba = bibas.find((biba) => biba.username === targetUsername);
+      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
 
       if (!targetBiba) {
         return GlobalHelper.sendError(ctx, 'Wrong user');
@@ -284,6 +287,10 @@ export default class BibaService extends BaseService {
       return GlobalHelper.sendError(ctx, 'Wrong format');
     } else {
       const targetBiba = await this.bibaRepo.getBibaByIds(chatId, ctx.from!.id);
+
+      if (!targetBiba) {
+        return GlobalHelper.sendError(ctx, 'У этого пользователя нет бибы');
+      }
 
       await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
     }

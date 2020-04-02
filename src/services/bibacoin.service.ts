@@ -1,7 +1,7 @@
 import { ContextMessageUpdate } from 'telegraf';
 import { Message } from 'telegraf/typings/telegram-types';
 import {
-  ZERO_BALANCE, BibacoinAction,
+  ZERO_BALANCE, BibacoinAction, NO_BIBA_NO_TRADE,
 } from '../types/services/bibacoin.service.types';
 import { BibacoinCommand, BibacoinDebugCommand } from '../types/globals/commands.types';
 import {
@@ -14,12 +14,15 @@ import BibacoinRepository from '../repositories/bibacoin.repo';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
+import BibaRepository from '../repositories/biba.repo';
+import GlobalHelper from '../utils/global.helper';
 
 export default class BibacoinService extends BaseService {
   private static instance: BibacoinService;
 
   private constructor(
     private readonly bibacoinRepo: BibacoinRepository,
+    private readonly bibaRepo: BibaRepository,
   ) {
     super();
   }
@@ -28,6 +31,7 @@ export default class BibacoinService extends BaseService {
     if (!BibacoinService.instance) {
       BibacoinService.instance = new BibacoinService(
         new BibacoinRepository(),
+        new BibaRepository(),
       );
     }
 
@@ -87,6 +91,11 @@ export default class BibacoinService extends BaseService {
         callback: (ctx): Promise<Message> => BibacoinService.sendIncomeList(ctx),
       },
       {
+        type: BotCommandType.COMMAND,
+        name: BibacoinCommand.GIVE,
+        callback: (ctx): Promise<Message> => this.giveCoins(ctx),
+      },
+      {
         type: BotCommandType.ACTION,
         name: BibacoinAction.BALANCE,
         callback: (ctx): Promise<void> => this.getBalance(ctx),
@@ -100,6 +109,47 @@ export default class BibacoinService extends BaseService {
     }
 
     this.bot.addListeners(commands);
+  }
+
+  @DeleteRequestMessage()
+  private async giveCoins(ctx: ContextMessageUpdate): Promise<Message> {
+    const params = ctx.message!.text!.split(' ');
+    const chatId = ctx.chat!.id;
+    const fromUserId = ctx.from!.id;
+    const username = params[1];
+    const count = parseInt(params[2], 10);
+
+    if (!username || !count) {
+      return GlobalHelper.sendError(ctx, 'Wrong format');
+    }
+
+    const fromUser = await this.bibaRepo.getBibaByIds(chatId, fromUserId);
+
+    if (!fromUser) {
+      return GlobalHelper.sendError(ctx, NO_BIBA_NO_TRADE);
+    }
+
+    if (count <= 0) {
+      return GlobalHelper.sendError(ctx, `${fromUser.username} нельзя передать меньше 1 бибакоина`);
+    }
+
+    const toUser = await this.bibaRepo.findBibaByUsernameInChat(chatId, username);
+
+    if (!toUser) {
+      return GlobalHelper.sendError(ctx, NO_BIBA_NO_TRADE);
+    }
+
+    const fromUserBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, fromUserId);
+    const fromUserNewBalance = fromUserBalance - count;
+
+    if (fromUserNewBalance < 0) {
+      return GlobalHelper.sendError(ctx, `${fromUser.username} ты не можешь отдать больше, чем у тебя есть`);
+    }
+
+    await this.bibacoinRepo.setBibacoinBalance(chatId, fromUserId, fromUserNewBalance);
+    await this.addCoins(toUser.userId, chatId, count);
+
+    return ctx.reply(`${toUser.username} получил ${count} бибакоинов от ${fromUser.username}. Не забудь сказать спасибо`);
   }
 
   private async setBalance(ctx: ContextMessageUpdate): Promise<Message> {
