@@ -218,6 +218,10 @@ export default class BibaService extends BaseService {
       return GlobalHelper.sendError(ctx, 'Wrong format');
     }
 
+    if (count <= 0) {
+      return GlobalHelper.sendError(ctx, `${username} ты не можешь продать меньше 1 см`);
+    }
+
     const biba = await this.bibaRepo.getBibaByIds(chatId, userId);
 
     if (!biba) {

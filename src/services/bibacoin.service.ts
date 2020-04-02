@@ -139,6 +139,10 @@ export default class BibacoinService extends BaseService {
       return GlobalHelper.sendError(ctx, NO_BIBA_NO_TRADE);
     }
 
+    if (fromUser.username === toUser.username) {
+      return GlobalHelper.sendError(ctx, `${fromUser.username} ты не можешь передать коины самому себе`);
+    }
+
     const fromUserBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, fromUserId);
     const fromUserNewBalance = fromUserBalance - count;
 
