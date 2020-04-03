@@ -62,8 +62,8 @@ export default class BibaService extends BaseService {
       return `Бибу мерял только ${allBibas[0].username}, поэтому он и обсос и король`;
     }
 
-    const topBiba = allBibas.shift();
-    const lowBiba = allBibas.pop();
+    const topBiba = [...allBibas].shift();
+    const lowBiba = [...allBibas].pop();
 
     return `👑 Королевская биба сегодня у ${topBiba!.username} - ${topBiba!.size} см\n\n`
          + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;

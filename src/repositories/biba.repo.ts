@@ -18,7 +18,7 @@ export default class BibaRepository extends BaseRepository {
     await this.redis.setAsync(`${this.entityName}:${chatId}:${payload.userId}`, JSON.stringify(payload));
   }
 
-  public async getAllBibasByChatId(chatId: number): Promise<Array<Biba>> {
+  public async getAllBibasByChatId(chatId: number, ignoreOutdated = true): Promise<Array<Biba>> {
     const allBibasKeys = await this.redis.keysAsync(`${this.entityName}:${chatId}:*`);
 
     if (!allBibasKeys || !allBibasKeys.length) {
@@ -32,7 +32,11 @@ export default class BibaRepository extends BaseRepository {
     }
 
     let parsedBibas: Array<Biba> = allBibas.map((rawBiba: string) => JSON.parse(rawBiba));
-    parsedBibas = parsedBibas.filter((biba) => !biba.outdated);
+
+    if (ignoreOutdated) {
+      parsedBibas = parsedBibas.filter((biba) => !biba.outdated);
+    }
+
     parsedBibas.sort((biba1, biba2) => (biba1.size < biba2.size ? 1 : -1));
 
     return parsedBibas;
@@ -51,7 +55,7 @@ export default class BibaRepository extends BaseRepository {
   }
 
   public async findBibaByUsernameInChat(chatId: number, username: string): Promise<Biba | null> {
-    const bibas = await this.getAllBibasByChatId(chatId);
+    const bibas = await this.getAllBibasByChatId(chatId, false);
     const foundBiba = bibas.find((biba) => biba.username === username);
     return foundBiba || null;
   }

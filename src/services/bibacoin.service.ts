@@ -119,7 +119,7 @@ export default class BibacoinService extends BaseService {
     const username = params[1];
     const count = parseInt(params[2], 10);
 
-    if (!username || !count) {
+    if (!username || count === undefined) {
       return GlobalHelper.sendError(ctx, 'Wrong format');
     }
 
