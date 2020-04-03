@@ -1,10 +1,10 @@
 import { ContextMessageUpdate } from 'telegraf';
+import { Message } from 'telegraf/typings/telegram-types';
+import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 
-const getUsernameFromContext = (ctx: ContextMessageUpdate): string => {
-  const user = (ctx.message && ctx.message!.from!) || ctx.from!;
-  return user.username
-    ? `@${user.username}` : `${user.first_name}${user.last_name
-      ? ` ${user.last_name}` : ''}`;
-};
-
-export default getUsernameFromContext;
+export default class GlobalHelper {
+  @DeleteResponseMessage(5000)
+  public static async sendError(ctx: ContextMessageUpdate, message: string): Promise<Message> {
+    return ctx.reply(message);
+  }
+}

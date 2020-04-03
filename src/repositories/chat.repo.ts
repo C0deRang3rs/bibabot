@@ -5,12 +5,19 @@ export default class ChatRepository extends BaseRepository {
 
   public async getAllChats(): Promise<Array<number>> {
     const chatKeys = await this.redis.keysAsync(`${this.entityName}:*`);
+
+    if (!chatKeys || !chatKeys.length) {
+      return [];
+    }
+
     const chatIds = chatKeys.map((key: string) => key.split(':')[1]);
     return chatIds.map((chatId) => parseInt(chatId, 10));
   }
 
-  public async getChat(chatId: number): Promise<string> {
-    return this.redis.getAsync(`${this.entityName}:${chatId}`);
+  public async getChat(chatId: number): Promise<string | null> {
+    const chat = await this.redis.getAsync(`${this.entityName}:${chatId}`);
+
+    return chat || null;
   }
 
   public async addChat(chatId: number): Promise<void> {

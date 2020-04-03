@@ -8,6 +8,8 @@ import { FUCK_TRIGGERS, CoinSide } from '../types/services/trash.service.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
+import GlobalHelper from '../utils/global.helper';
+import getUsernameFromContext from '../utils/global.util';
 
 export default class TrashService extends BaseService {
   private static instance: TrashService;
@@ -46,11 +48,8 @@ export default class TrashService extends BaseService {
 
   @DeleteRequestMessage()
   private static async roll(ctx: ContextMessageUpdate): Promise<Message> {
-    if (!ctx.message || !ctx.message.text) {
-      return ctx.reply('Empty message');
-    }
-
-    const payload = ctx.message.text.split(' ')[1];
+    const username = getUsernameFromContext(ctx);
+    const payload = ctx.message!.text!.split(' ')[1];
 
     let from = 1;
     let to = 100;
@@ -62,18 +61,18 @@ export default class TrashService extends BaseService {
       const max = parseInt(parameters[1], 10);
 
       if (!min || !max) {
-        return ctx.reply('Wrong format');
+        return GlobalHelper.sendError(ctx, 'Wrong format');
       }
 
       if (!Number.isInteger(min) || !Number.isInteger(max)) {
-        return ctx.reply('Wrong data given');
+        return GlobalHelper.sendError(ctx, 'Wrong data');
       }
 
       from = min;
       to = max;
     }
 
-    return ctx.reply(Math.floor(Math.random() * (to - from + 1) + from).toString());
+    return ctx.reply(`${username} рандомит ${Math.floor(Math.random() * (to - from + 1) + from)}`);
   }
 
   protected initListeners(): void {
@@ -98,11 +97,12 @@ export default class TrashService extends BaseService {
 
   @DeleteRequestMessage()
   private async coinFlip(ctx: ContextMessageUpdate): Promise<Message> {
+    const username = getUsernameFromContext(ctx);
     const flipResult = Math.floor(Math.random() * 2) === 0 ? 'Heads' : 'Tails';
 
     await this.statRepo.incrementStatCount(flipResult.toLowerCase());
 
-    return ctx.reply(flipResult);
+    return ctx.reply(`${username} выкидывает ${flipResult}`);
   }
 
   @DeleteRequestMessage()
@@ -114,8 +114,8 @@ export default class TrashService extends BaseService {
     const headsStat = Math.round((headsCount / (tailsCount + headsCount)) * 100);
 
     return ctx.reply(
-      `Tails - ${tailsStat || 0}%\n`
-    + `Heads - ${headsStat || 0}%`,
+      `Tails - ${tailsStat || 0}% - ${tailsCount} раз\n`
+    + `Heads - ${headsStat || 0}% - ${headsCount} раз`,
     );
   }
 }

@@ -7,8 +7,13 @@ export default class LastMessageRepository extends BaseRepository {
     await this.redis.setAsync(`${this.entityName}:${prefix}:${chatId}`, messageId.toString());
   }
 
-  public async getLastMessage(prefix: string, chatId: number): Promise<number> {
+  public async getLastMessage(prefix: string, chatId: number): Promise<number | null> {
     const result = await this.redis.getAsync(`${this.entityName}:${prefix}:${chatId}`);
+
+    if (!result) {
+      return null;
+    }
+
     return parseInt(result, 10);
   }
 }

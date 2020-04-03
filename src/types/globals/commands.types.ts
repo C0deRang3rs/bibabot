@@ -9,10 +9,21 @@ export enum BibaCommand {
   BIBA = 'biba',
   UNRANKED_BIBA = 'unbiba',
   BIBA_TABLE = 'biba_table',
+  SELL_BIBA = 'sell_biba',
+}
+
+export enum BibaDebugCommand {
+  REMOVE_BIBA = 'remove_biba',
+  SET_BIBA = 'set_biba',
+  TRIGGER_DAILY = 'trigger_daily',
 }
 
 export enum BibacoinCommand {
   INCOME_LIST = 'income_list',
+  GIVE = 'give',
+}
+
+export enum BibacoinDebugCommand {
   SET_BALANCE = 'set_balance',
 }
 
