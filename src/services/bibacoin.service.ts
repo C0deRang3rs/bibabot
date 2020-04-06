@@ -60,12 +60,12 @@ export default class BibacoinService extends BaseService {
 
   public async dailyIncome(chatId: number): Promise<void> {
     const balances = await this.bibacoinRepo.getAllBalancesByChatId(chatId);
-
     await Promise.all(Object.keys(balances).map(async (userId) => {
+      console.log(`${balances[userId]}`);
       await this.bibacoinRepo.setBibacoinBalance(
         chatId,
         parseInt(userId, 10),
-        Math.floor(balances[userId] * ((100 + DAILY_BIBACOINT_INCOME_PERCENT) / 100)),
+        (balances[userId] * ((100 + DAILY_BIBACOINT_INCOME_PERCENT) / 100)).toFixed(2),
       );
     }));
   }
@@ -129,7 +129,7 @@ export default class BibacoinService extends BaseService {
     const chatId = ctx.chat!.id;
     const fromUserId = ctx.from!.id;
     const username = params[1];
-    const count = parseInt(params[2], 10);
+    const count = parseFloat(params[2]);
 
     if (!username || count === undefined) {
       return GlobalHelper.sendError(ctx, 'Wrong format');

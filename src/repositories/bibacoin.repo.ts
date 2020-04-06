@@ -39,7 +39,7 @@ export default class BibacoinRepository extends BaseRepository {
       return [];
     }
 
-    return balances.map((balance) => parseInt(balance, 10));
+    return balances.map((balance) => parseFloat(balance));
   }
 
   public async getAllBalancesByChatId(chatId: number): Promise<Record<string, number>> {
