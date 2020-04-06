@@ -61,7 +61,6 @@ export default class BibacoinService extends BaseService {
   public async dailyIncome(chatId: number): Promise<void> {
     const balances = await this.bibacoinRepo.getAllBalancesByChatId(chatId);
     await Promise.all(Object.keys(balances).map(async (userId) => {
-      console.log(`${balances[userId]}`);
       await this.bibacoinRepo.setBibacoinBalance(
         chatId,
         parseInt(userId, 10),

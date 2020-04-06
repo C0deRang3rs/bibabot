@@ -74,7 +74,8 @@ export default class BibaService extends BaseService {
               + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
     }
 
-    return `${message}\n\nТакже все участники чата получили свой дневной прирост бибакоинов в ${DAILY_BIBACOINT_INCOME_PERCENT}%`;
+    return `${message}\n\n`
+         + `Также все участники чата получили свой дневной прирост бибакоинов в ${DAILY_BIBACOINT_INCOME_PERCENT}%`;
   }
 
   @DeleteResponseMessage(10000)
