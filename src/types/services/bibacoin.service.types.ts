@@ -26,3 +26,4 @@ export const ZERO_BALANCE = 'Пока что у тебя нет бибакоин
 export const NO_BIBA_TO_BUY = 'У тебя нет бибы, так что увеличивать нечего';
 export const NO_BIBA_TO_REROLL = 'У тебя нет бибы, так что измерять нечего';
 export const NO_BIBA_NO_TRADE = 'К сожалению сейчас обмениваться бибакоинами могут только те у кого хоть раз была биба';
+export const DAILY_BIBACOINT_INCOME_PERCENT = 10;

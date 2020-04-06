@@ -21,7 +21,7 @@ import DeleteRequestMessage from '../decorators/delete.request.message.decorator
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 import BibacoinService from './bibacoin.service';
-import { BibacoinActivity } from '../types/services/bibacoin.service.types';
+import { BibacoinActivity, DAILY_BIBACOINT_INCOME_PERCENT } from '../types/services/bibacoin.service.types';
 import { getUsernameFromContext, getBibaTableText } from '../utils/global.util';
 import GlobalHelper from '../utils/global.helper';
 import UpdateBibaTable from '../decorators/update.biba.table.decorator';
@@ -56,17 +56,25 @@ export default class BibaService extends BaseService {
   }
 
   private static getDailyMessage(allBibas: Array<Biba>): string {
-    if (!allBibas.length) return NO_BIBA_MEASURED;
+    let message = '';
 
-    if (allBibas.length === 1) {
-      return `Бибу мерял только ${allBibas[0].username}, поэтому он и обсос и король`;
+    if (!allBibas.length) {
+      message = NO_BIBA_MEASURED;
     }
 
-    const topBiba = [...allBibas].shift();
-    const lowBiba = [...allBibas].pop();
+    if (allBibas.length === 1) {
+      message = `Бибу мерял только ${allBibas[0].username}, поэтому он и обсос и король`;
+    }
 
-    return `👑 Королевская биба сегодня у ${topBiba!.username} - ${topBiba!.size} см\n\n`
-         + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
+    if (allBibas.length > 1) {
+      const topBiba = [...allBibas].shift();
+      const lowBiba = [...allBibas].pop();
+
+      message = `👑 Королевская биба сегодня у ${topBiba!.username} - ${topBiba!.size} см\n\n`
+              + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
+    }
+
+    return `${message}\n\nТакже все участники чата получили свой дневной прирост бибакоинов в ${DAILY_BIBACOINT_INCOME_PERCENT}%`;
   }
 
   @DeleteResponseMessage(10000)
@@ -138,13 +146,13 @@ export default class BibaService extends BaseService {
     return ctx.reply(bibaMessage);
   }
 
-  @UpdateBibaTable()
   public async dailyBiba(done?: Bull.DoneCallback, forcedChatId?: number): Promise<void> {
     try {
       const chatIds = forcedChatId ? [forcedChatId] : await this.chatRepo.getAllChats();
 
       await Promise.all(chatIds.map(async (chatId) => {
         console.log(`[${chatId}] Daily biba`);
+        await this.bibacoinService.dailyIncome(chatId);
 
         const allBibas = await this.bibaRepo.getAllBibasByChatId(chatId);
         const message = BibaService.getDailyMessage(allBibas);

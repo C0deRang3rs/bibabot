@@ -1,7 +1,7 @@
 import { ContextMessageUpdate } from 'telegraf';
 import { Message } from 'telegraf/typings/telegram-types';
 import {
-  ZERO_BALANCE, BibacoinAction, NO_BIBA_NO_TRADE,
+  ZERO_BALANCE, BibacoinAction, NO_BIBA_NO_TRADE, DAILY_BIBACOINT_INCOME_PERCENT,
 } from '../types/services/bibacoin.service.types';
 import { BibacoinCommand, BibacoinDebugCommand } from '../types/globals/commands.types';
 import {
@@ -57,6 +57,18 @@ export default class BibacoinService extends BaseService {
 
     return next!();
   };
+
+  public async dailyIncome(chatId: number): Promise<void> {
+    const balances = await this.bibacoinRepo.getAllBalancesByChatId(chatId);
+
+    await Promise.all(Object.keys(balances).map(async (userId) => {
+      await this.bibacoinRepo.setBibacoinBalance(
+        chatId,
+        parseInt(userId, 10),
+        Math.floor(balances[userId] * ((100 + DAILY_BIBACOINT_INCOME_PERCENT) / 100)),
+      );
+    }));
+  }
 
   public async addCoins(userId: number, chatId: number, value: number): Promise<void> {
     const currentBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, userId);

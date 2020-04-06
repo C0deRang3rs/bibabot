@@ -1,5 +1,4 @@
 import { ContextMessageUpdate } from 'telegraf';
-import zipObject from 'lodash.zipobject';
 import Bull from 'bull';
 import { Message } from 'telegraf/typings/telegram-types';
 import GenerateNameUtil from '../utils/generate-name.util';
@@ -46,14 +45,7 @@ export default class ChangeTitleService extends BaseService {
   }
 
   public async resolveRenames(done: Bull.DoneCallback): Promise<void> {
-    const ids = await this.timerRepo.getAllTimers();
-
-    if (!ids.length) {
-      return;
-    }
-
-    const values = await this.timerRepo.getTimersByChatIds(ids);
-    const objectedTimers: Record<string, string> = zipObject(ids, values);
+    const objectedTimers = await this.timerRepo.getAllTimers();
 
     await Promise.all(Object.keys(objectedTimers).map(async (id: string) => {
       if (this.isRenameNeeded(objectedTimers[id])) {
