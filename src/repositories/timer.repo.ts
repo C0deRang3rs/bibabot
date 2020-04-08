@@ -1,9 +1,10 @@
+import zipObject from 'lodash.zipobject';
 import BaseRepository from './base.repository';
 
 export default class TimerRepository extends BaseRepository {
   protected entityName = 'auto:rename';
 
-  public async getAllTimers(): Promise<Array<number>> {
+  public async getAllTimersKeys(): Promise<Array<number>> {
     const chatKeys = await this.redis.keysAsync(`${this.entityName}:*`);
 
     if (!chatKeys || !chatKeys.length) {
@@ -12,6 +13,18 @@ export default class TimerRepository extends BaseRepository {
 
     const chatIds = chatKeys.map((key: string) => key.split(':')[2]);
     return chatIds.map((chatId) => parseInt(chatId, 10));
+  }
+
+  public async getAllTimers(): Promise<Record<string, string>> {
+    const ids = await this.getAllTimersKeys();
+
+    if (!ids.length) {
+      return {};
+    }
+
+    const values = await this.getTimersByChatIds(ids);
+
+    return zipObject(ids, values);
   }
 
   public async getTimersByChatIds(chatIds: Array<number>): Promise<Array<string>> {

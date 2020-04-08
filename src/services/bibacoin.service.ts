@@ -1,7 +1,7 @@
 import { ContextMessageUpdate } from 'telegraf';
 import { Message } from 'telegraf/typings/telegram-types';
 import {
-  ZERO_BALANCE, BibacoinAction, NO_BIBA_NO_TRADE,
+  ZERO_BALANCE, BibacoinAction, NO_BIBA_NO_TRADE, DAILY_BIBACOINT_INCOME_PERCENT,
 } from '../types/services/bibacoin.service.types';
 import { BibacoinCommand, BibacoinDebugCommand } from '../types/globals/commands.types';
 import {
@@ -57,6 +57,17 @@ export default class BibacoinService extends BaseService {
 
     return next!();
   };
+
+  public async dailyIncome(chatId: number): Promise<void> {
+    const balances = await this.bibacoinRepo.getAllBalancesByChatId(chatId);
+    await Promise.all(Object.keys(balances).map(async (userId) => {
+      await this.bibacoinRepo.setBibacoinBalance(
+        chatId,
+        parseInt(userId, 10),
+        (balances[userId] * ((100 + DAILY_BIBACOINT_INCOME_PERCENT) / 100)).toFixed(),
+      );
+    }));
+  }
 
   public async addCoins(userId: number, chatId: number, value: number): Promise<void> {
     const currentBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, userId);
@@ -121,6 +132,10 @@ export default class BibacoinService extends BaseService {
 
     if (!username || count === undefined) {
       return GlobalHelper.sendError(ctx, 'Wrong format');
+    }
+
+    if (count % 1 === 0) {
+      return GlobalHelper.sendError(ctx, 'Нельзя передвать дробное количество бибакоинов');
     }
 
     const fromUser = await this.bibaRepo.getBibaByIds(chatId, fromUserId);

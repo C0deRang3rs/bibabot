@@ -8,7 +8,6 @@ import {
   Biba,
   POSITIVE_BIBA,
   NEGATIVE_BIBA,
-  NO_TABLE_DATA,
   NO_BIBA_MEASURED,
   SAME_BIBA,
 } from '../types/services/biba.service.types';
@@ -22,9 +21,10 @@ import DeleteRequestMessage from '../decorators/delete.request.message.decorator
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 import BibacoinService from './bibacoin.service';
-import { BibacoinActivity } from '../types/services/bibacoin.service.types';
-import getUsernameFromContext from '../utils/global.util';
+import { BibacoinActivity, DAILY_BIBACOINT_INCOME_PERCENT } from '../types/services/bibacoin.service.types';
+import { getUsernameFromContext, getBibaTableText } from '../utils/global.util';
 import GlobalHelper from '../utils/global.helper';
+import UpdateBibaTable from '../decorators/update.biba.table.decorator';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -56,17 +56,26 @@ export default class BibaService extends BaseService {
   }
 
   private static getDailyMessage(allBibas: Array<Biba>): string {
-    if (!allBibas.length) return NO_BIBA_MEASURED;
+    let message = '';
 
-    if (allBibas.length === 1) {
-      return `Бибу мерял только ${allBibas[0].username}, поэтому он и обсос и король`;
+    if (!allBibas.length) {
+      message = NO_BIBA_MEASURED;
     }
 
-    const topBiba = [...allBibas].shift();
-    const lowBiba = [...allBibas].pop();
+    if (allBibas.length === 1) {
+      message = `Бибу мерял только ${allBibas[0].username}, поэтому он и обсос и король`;
+    }
 
-    return `👑 Королевская биба сегодня у ${topBiba!.username} - ${topBiba!.size} см\n\n`
-         + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
+    if (allBibas.length > 1) {
+      const topBiba = [...allBibas].shift();
+      const lowBiba = [...allBibas].pop();
+
+      message = `👑 Королевская биба сегодня у ${topBiba!.username} - ${topBiba!.size} см\n\n`
+              + `👌 Обсосом дня становится ${lowBiba!.username} - ${lowBiba!.size} см`;
+    }
+
+    return `${message}\n\n`
+         + `Также все участники чата получили свой дневной прирост бибакоинов в ${DAILY_BIBACOINT_INCOME_PERCENT}%`;
   }
 
   @DeleteResponseMessage(10000)
@@ -91,6 +100,13 @@ export default class BibaService extends BaseService {
     return oldSize - newSize > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA;
   }
 
+  @DeleteRequestMessage()
+  @DeleteLastMessage('biba_table')
+  private static async bibaTable(ctx: ContextMessageUpdate): Promise<Message> {
+    return ctx.reply(await getBibaTableText(ctx.chat!.id));
+  }
+
+  @UpdateBibaTable()
   @DeleteRequestMessage()
   public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<Message> {
     const user = (ctx.message && ctx.message!.from!) || ctx.from!;
@@ -137,6 +153,7 @@ export default class BibaService extends BaseService {
 
       await Promise.all(chatIds.map(async (chatId) => {
         console.log(`[${chatId}] Daily biba`);
+        await this.bibacoinService.dailyIncome(chatId);
 
         const allBibas = await this.bibaRepo.getAllBibasByChatId(chatId);
         const message = BibaService.getDailyMessage(allBibas);
@@ -174,7 +191,7 @@ export default class BibaService extends BaseService {
       {
         type: BotCommandType.COMMAND,
         name: BibaCommand.BIBA_TABLE,
-        callback: (ctx): Promise<Message> => this.bibaTable(ctx),
+        callback: (ctx): Promise<Message> => BibaService.bibaTable(ctx),
       },
       {
         type: BotCommandType.COMMAND,
@@ -206,6 +223,7 @@ export default class BibaService extends BaseService {
     this.bot.addListeners(commands);
   }
 
+  @UpdateBibaTable()
   @DeleteRequestMessage()
   private async sellBiba(ctx: ContextMessageUpdate): Promise<Message> {
     const chatId = ctx.chat!.id;
@@ -241,6 +259,7 @@ export default class BibaService extends BaseService {
     return ctx.reply(`У ${username} отрезали ${count} см бибы, но взамен он получил ${cost} бибакоинов`);
   }
 
+  @UpdateBibaTable()
   private async removeBiba(ctx: ContextMessageUpdate): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
@@ -268,6 +287,7 @@ export default class BibaService extends BaseService {
     return ctx.reply('Done');
   }
 
+  @UpdateBibaTable()
   private async setBiba(ctx: ContextMessageUpdate): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
@@ -300,18 +320,5 @@ export default class BibaService extends BaseService {
     }
 
     return ctx.reply('Done');
-  }
-
-  @DeleteRequestMessage()
-  @DeleteLastMessage('biba_table')
-  private async bibaTable(ctx: ContextMessageUpdate): Promise<Message> {
-    const allBibas = await this.bibaRepo.getAllBibasByChatId(ctx.chat!.id);
-
-    if (!allBibas.length) {
-      return ctx.reply(NO_TABLE_DATA);
-    }
-
-    const message = allBibas.map((biba, index) => `${index + 1}. ${biba.username.replace('@', '')} - ${biba.size} см`);
-    return ctx.reply(message.join('\n'));
   }
 }

@@ -1,7 +1,7 @@
 import Telegraf, { ContextMessageUpdate } from 'telegraf';
 import { MessageSubTypes } from 'telegraf/typings/telegram-types';
 import { TelegrafFull, BotListener, BotEvent } from '../types/core/bot.types';
-import getUsernameFromContext from '../utils/global.util';
+import { getUsernameFromContext } from '../utils/global.util';
 
 export default class Bot {
   private static instance: Bot;

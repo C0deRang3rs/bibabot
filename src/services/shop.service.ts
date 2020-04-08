@@ -15,6 +15,7 @@ import { ShopCommand } from '../types/globals/commands.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
+import UpdateBibaTable from '../decorators/update.biba.table.decorator';
 
 export default class ShopService extends BaseService {
   private static instance: ShopService;
@@ -99,6 +100,7 @@ export default class ShopService extends BaseService {
     }
   }
 
+  @UpdateBibaTable()
   private async buyOneCM(ctx: ContextMessageUpdate): Promise<void> {
     try {
       const price = getProductPrice(Product.BIBA_CM);

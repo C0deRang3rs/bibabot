@@ -9,7 +9,7 @@ import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import GlobalHelper from '../utils/global.helper';
-import getUsernameFromContext from '../utils/global.util';
+import { getUsernameFromContext } from '../utils/global.util';
 
 export default class TrashService extends BaseService {
   private static instance: TrashService;
