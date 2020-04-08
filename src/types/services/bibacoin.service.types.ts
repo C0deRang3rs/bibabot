@@ -13,11 +13,11 @@ export enum BibacoinAction {
 }
 
 export const BibacoinCredit: Record<BibacoinActivity, number> = {
-  [BibacoinActivity.MESSAGE]: 0.5,
-  [BibacoinActivity.PHOTO]: 1.5,
+  [BibacoinActivity.MESSAGE]: 1,
+  [BibacoinActivity.PHOTO]: 2,
   [BibacoinActivity.VOICE]: -1,
-  [BibacoinActivity.STICKER]: 0.5,
-  [BibacoinActivity.VIDEO]: 1.5,
+  [BibacoinActivity.STICKER]: 1,
+  [BibacoinActivity.VIDEO]: 2,
   [BibacoinActivity.SMALL_PEPE]: 20,
   [BibacoinActivity.BIBA_CM]: 1,
 };

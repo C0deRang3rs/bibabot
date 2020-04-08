@@ -19,7 +19,7 @@ export default class BibacoinRepository extends BaseRepository {
       return 0;
     }
 
-    return parseFloat(coins);
+    return parseInt(coins, 10);
   }
 
   public async getAllBalancesKeysByChatId(chatId: number): Promise<Array<number>> {
@@ -39,7 +39,7 @@ export default class BibacoinRepository extends BaseRepository {
       return [];
     }
 
-    return balances.map((balance) => parseFloat(balance));
+    return balances.map((balance) => parseInt(balance, 10));
   }
 
   public async getAllBalancesByChatId(chatId: number): Promise<Record<string, number>> {

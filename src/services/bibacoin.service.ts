@@ -64,7 +64,7 @@ export default class BibacoinService extends BaseService {
       await this.bibacoinRepo.setBibacoinBalance(
         chatId,
         parseInt(userId, 10),
-        (balances[userId] * ((100 + DAILY_BIBACOINT_INCOME_PERCENT) / 100)).toFixed(2),
+        (balances[userId] * ((100 + DAILY_BIBACOINT_INCOME_PERCENT) / 100)).toFixed(),
       );
     }));
   }
@@ -128,10 +128,14 @@ export default class BibacoinService extends BaseService {
     const chatId = ctx.chat!.id;
     const fromUserId = ctx.from!.id;
     const username = params[1];
-    const count = parseFloat(params[2]);
+    const count = parseInt(params[2], 10);
 
     if (!username || count === undefined) {
       return GlobalHelper.sendError(ctx, 'Wrong format');
+    }
+
+    if (count % 1 === 0) {
+      return GlobalHelper.sendError(ctx, 'Нельзя передвать дробное количество бибакоинов');
     }
 
     const fromUser = await this.bibaRepo.getBibaByIds(chatId, fromUserId);
