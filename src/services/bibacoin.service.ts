@@ -128,13 +128,13 @@ export default class BibacoinService extends BaseService {
     const chatId = ctx.chat!.id;
     const fromUserId = ctx.from!.id;
     const username = params[1];
-    const count = parseInt(params[2], 10);
+    const count = parseFloat(params[2]);
 
-    if (!username || count === undefined) {
+    if (!username || count === undefined || Number.isNaN(count)) {
       return GlobalHelper.sendError(ctx, 'Wrong format');
     }
 
-    if (count % 1 === 0) {
+    if (count % 1 !== 0) {
       return GlobalHelper.sendError(ctx, 'Нельзя передвать дробное количество бибакоинов');
     }
 
