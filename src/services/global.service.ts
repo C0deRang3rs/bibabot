@@ -9,6 +9,7 @@ import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 import Bot from '../core/bot';
+import MemeService from './meme.service';
 
 export default class GlobalService extends BaseService {
   private static instance: GlobalService;
@@ -33,6 +34,7 @@ export default class GlobalService extends BaseService {
     this.bot.app.on(
       BotEvent.MESSAGE,
       BibacoinService.getInstance().addMessageCoins,
+      MemeService.getInstance().handleMeme,
       TrashService.trashHandler,
     );
   }

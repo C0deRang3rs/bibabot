@@ -85,7 +85,7 @@ export default class BibacoinService extends BaseService {
     throw new Error(`Недостаточно бибакоинов. Требуется ${value}, у тебя ${currentBalance}`);
   }
 
-  public async newTransaction(userId: number, chatId: number, value: number): Promise<number> {
+  public async withdrawCoins(userId: number, chatId: number, value: number): Promise<number> {
     const currentBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, userId);
 
     const newBalance = currentBalance - value;
@@ -185,6 +185,6 @@ export default class BibacoinService extends BaseService {
   private async getBalance(ctx: ContextMessageUpdate): Promise<void> {
     const balance = await this.bibacoinRepo.getBibacoinBalanceByIds(ctx.chat!.id, ctx.from!.id);
     const message = balance ? `У тебя на счету ${balance} бибакоинов` : ZERO_BALANCE;
-    await ctx.answerCbQuery(message);
+    await ctx.answerCbQuery(message, true);
   }
 }

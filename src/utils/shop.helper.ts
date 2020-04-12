@@ -34,8 +34,9 @@ export const getActivityContext = (activity: BibacoinActivity): string => {
     case BibacoinActivity.STICKER: message = 'Стикер'; break;
     case BibacoinActivity.VIDEO: message = 'Видос'; break;
     case BibacoinActivity.VOICE: message = 'Войс'; break;
-    case BibacoinActivity.BIBA_CM: message = 'За продажу одного см бибы'; break;
-    case BibacoinActivity.SMALL_PEPE: message = 'За маленькую бибу'; break;
+    case BibacoinActivity.BIBA_CM: message = 'Один см бибы'; break;
+    case BibacoinActivity.SMALL_PEPE: message = 'Маленькая биба'; break;
+    case BibacoinActivity.MEME_LIKE: message = 'Лайк на мем'; break;
     default: message = 'Пока нет описания этой активности';
   }
 

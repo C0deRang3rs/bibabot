@@ -5,7 +5,8 @@ export enum BibacoinActivity {
   STICKER = 'STICKER',
   VIDEO = 'VIDEO',
   SMALL_PEPE = 'SMALL_PEPE',
-  BIBA_CM = 'BIBA_CM'
+  BIBA_CM = 'BIBA_CM',
+  MEME_LIKE = 'MEME_LIKE',
 }
 
 export enum BibacoinAction {
@@ -20,6 +21,7 @@ export const BibacoinCredit: Record<BibacoinActivity, number> = {
   [BibacoinActivity.VIDEO]: 2,
   [BibacoinActivity.SMALL_PEPE]: 20,
   [BibacoinActivity.BIBA_CM]: 1,
+  [BibacoinActivity.MEME_LIKE]: 2,
 };
 
 export const ZERO_BALANCE = 'Пока что у тебя нет бибакоинов, ты можешь получить их за любую активность в чате';
