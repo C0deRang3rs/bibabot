@@ -46,7 +46,7 @@ export default class BibacoinService extends BaseService {
     return ctx.reply(list.map((activity) => `${getActivityContext(activity)}`).join('\n'));
   }
 
-  public addMessageCoins = async (ctx: ContextMessageUpdate, next: Function | undefined): Promise<Function> => {
+  public async addMessageCoins(ctx: ContextMessageUpdate, next: Function | undefined): Promise<Function> {
     if (!ctx.message) return next!();
 
     const chatId = ctx.chat!.id;
@@ -56,7 +56,7 @@ export default class BibacoinService extends BaseService {
     await this.addCoins(userId, chatId, messagePrice);
 
     return next!();
-  };
+  }
 
   public async dailyIncome(chatId: number): Promise<void> {
     const balances = await this.bibacoinRepo.getAllBalancesByChatId(chatId);

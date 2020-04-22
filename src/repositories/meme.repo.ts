@@ -1,4 +1,4 @@
-import BaseRepository from './base.repository';
+import BaseRepository from './base.repo';
 import { Stat, MemeStatStatus, MemeStatResult } from '../types/services/meme.service.types';
 
 export default class MemeRepository extends BaseRepository {

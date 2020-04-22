@@ -1,5 +1,5 @@
 import zipObject from 'lodash.zipobject';
-import BaseRepository from './base.repository';
+import BaseRepository from './base.repo';
 
 export default class TimerRepository extends BaseRepository {
   protected entityName = 'auto:rename';

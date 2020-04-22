@@ -37,6 +37,10 @@ export enum ShopCommand {
   SHOP = 'shop',
 }
 
+export enum ConfigCommand {
+  CONFIG = 'config'
+}
+
 export enum GlobalCommand {
   START = 'start',
   STOP = 'stop',

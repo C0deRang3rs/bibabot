@@ -1,5 +1,5 @@
 import { Biba } from '../types/services/biba.service.types';
-import BaseRepository from './base.repository';
+import BaseRepository from './base.repo';
 
 export default class BibaRepository extends BaseRepository {
   protected entityName = 'biba';

@@ -1,4 +1,4 @@
-import BaseRepository from './base.repository';
+import BaseRepository from './base.repo';
 
 export default class LastMessageRepository extends BaseRepository {
   protected entityName = 'last:message';

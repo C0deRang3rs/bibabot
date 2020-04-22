@@ -1,4 +1,4 @@
-import BaseRepository from './base.repository';
+import BaseRepository from './base.repo';
 
 export default class StatRepository extends BaseRepository {
   protected entityName = 'stat';

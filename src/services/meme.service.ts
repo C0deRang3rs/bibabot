@@ -2,11 +2,15 @@ import { ContextMessageUpdate, Markup } from 'telegraf';
 import { Message } from 'telegraf/typings/telegram-types';
 import BaseService from './base.service';
 import { BotCommandType } from '../types/core/bot.types';
-import MemeRepository from '../repositories/meme.repository';
+import MemeRepository from '../repositories/meme.repo';
 import { MemeAction, MemeStatResult, MemeStatStatus } from '../types/services/meme.service.types';
 import BibacoinService from './bibacoin.service';
 import { getPriceByActivity } from '../utils/shop.helper';
 import { BibacoinActivity } from '../types/services/bibacoin.service.types';
+import CheckConfig from '../decorators/check.config.decorator';
+import { ConfigProperty } from '../types/services/config.service.types';
+import CheckMessageContent from '../decorators/check.message.content.decorator';
+import { MessageContent } from '../types/globals/message.types';
 
 export default class MemeService extends BaseService {
   private static instance: MemeService;
@@ -29,13 +33,11 @@ export default class MemeService extends BaseService {
     return MemeService.instance;
   }
 
-  public handleMeme = async (ctx: ContextMessageUpdate, next: Function | undefined): Promise<Message> => {
-    if (!ctx.message || !ctx.message.photo || !ctx.message.photo.length) {
-      return next!();
-    }
-
+  @CheckMessageContent(MessageContent.PHOTO)
+  @CheckConfig(ConfigProperty.MEME_STAT)
+  public async handleMeme(ctx: ContextMessageUpdate, next: Function | undefined): Promise<Message> {
     const chatId = ctx.chat!.id;
-    const messageId = ctx.message.message_id;
+    const messageId = ctx.message!.message_id;
 
     const responseMessage = await ctx.reply(
       'Оцените данный мем',
@@ -51,7 +53,7 @@ export default class MemeService extends BaseService {
     await this.memeRepo.initStat(chatId, responseMessage.message_id, ctx.from!.id);
 
     return next!();
-  };
+  }
 
   protected initListeners(): void {
     this.bot.addListeners([
@@ -68,6 +70,7 @@ export default class MemeService extends BaseService {
     ]);
   }
 
+  @CheckConfig(ConfigProperty.MEME_STAT)
   private async changeMemeStat(ctx: ContextMessageUpdate, actionType: MemeAction): Promise<void> {
     const { message } = ctx.update.callback_query!;
     const chatId = ctx.chat!.id;
