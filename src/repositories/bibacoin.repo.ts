@@ -1,5 +1,5 @@
 import zipObject from 'lodash.zipobject';
-import BaseRepository from './base.repository';
+import BaseRepository from './base.repo';
 
 export default class BibacoinRepository extends BaseRepository {
   protected entityName = 'coin';

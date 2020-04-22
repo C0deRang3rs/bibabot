@@ -8,6 +8,8 @@ import Redis from './core/redis';
 import Bot from './core/bot';
 import ShopService from './services/shop.service';
 import GlobalService from './services/global.service';
+import MemeService from './services/meme.service';
+import ConfigService from './services/config.service';
 
 // CORE
 Redis.getInstance();
@@ -22,5 +24,7 @@ TrashService.getInstance();
 BibacoinService.getInstance();
 ShopService.getInstance();
 GlobalService.getInstance();
+MemeService.getInstance();
+ConfigService.getInstance();
 Bot.getInstance().applyListeners();
 GlobalService.getInstance().initMessageHandler();
