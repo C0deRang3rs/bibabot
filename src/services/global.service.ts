@@ -34,8 +34,8 @@ export default class GlobalService extends BaseService {
     this.bot.app.on(
       BotEvent.MESSAGE,
       async (ctx, next) => BibacoinService.getInstance().addMessageCoins(ctx, next),
-      async (ctx, next) => MemeService.getInstance().handleMeme(ctx, next),
       async (ctx, next) => TrashService.trashHandler(ctx, next),
+      async (ctx, next) => MemeService.getInstance().handleMeme(ctx, next),
     );
   }
 
