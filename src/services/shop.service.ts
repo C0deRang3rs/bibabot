@@ -92,8 +92,8 @@ export default class ShopService extends BaseService {
 
       await this.bibaService.bibaMetr(ctx, true);
 
-      const balance = await this.bibacoinService.withdrawCoins(userId, chatId, price);
-      await ctx.answerCbQuery(`Реролл куплен! На счету осталось ${balance} коинов`);
+      await this.bibacoinService.withdrawCoins(userId, chatId, price);
+      await ctx.answerCbQuery('Реролл куплен!');
     } catch (e) {
       await ctx.answerCbQuery(e.message, true);
       throw e;
@@ -116,6 +116,7 @@ export default class ShopService extends BaseService {
 
       await this.bibaRepo.setBiba(chatId, { ...currentBiba, size: currentBiba.size + 1 });
 
+      await this.bibacoinService.withdrawCoins(userId, chatId, price);
       await ctx.answerCbQuery(`Теперь твоя биба ${currentBiba.size + 1} см`);
     } catch (e) {
       await ctx.answerCbQuery(e.message, true);
