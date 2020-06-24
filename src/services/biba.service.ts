@@ -21,7 +21,11 @@ import DeleteRequestMessage from '../decorators/delete.request.message.decorator
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 import BibacoinService from './bibacoin.service';
-import { BibacoinActivity, DAILY_BIBACOINT_INCOME_PERCENT } from '../types/services/bibacoin.service.types';
+import {
+  BibacoinActivity,
+  DAILY_BIBACOINT_INCOME_PERCENT,
+  MAX_DAILY_BIBACOINT_INCOME,
+} from '../types/services/bibacoin.service.types';
 import { getUsernameFromContext, getBibaTableText } from '../utils/global.util';
 import GlobalHelper from '../utils/global.helper';
 import UpdateBibaTable from '../decorators/update.biba.table.decorator';
@@ -63,8 +67,7 @@ export default class BibaService extends BaseService {
     }
 
     if (allBibas.length === 1) {
-      message = `Бибу мерял только ${allBibas[0].username}, поэтому он и обсос и король.`
-      + 'Если вдруг тебе нужно отключить ежедневную бибу((((((, то используй команду /stop';
+      message = `Бибу мерял только ${allBibas[0].username}, поэтому он и обсос и король`;
     }
 
     if (allBibas.length > 1) {
@@ -76,7 +79,8 @@ export default class BibaService extends BaseService {
     }
 
     return `${message}\n\n`
-         + `Также все участники чата получили свой дневной прирост бибакоинов в ${DAILY_BIBACOINT_INCOME_PERCENT}%`;
+         + `Также все участники чата получили свой дневной прирост бибакоинов в ${DAILY_BIBACOINT_INCOME_PERCENT}%. `
+         + `Но не больше ${MAX_DAILY_BIBACOINT_INCOME}`;
   }
 
   @DeleteResponseMessage(10000)
