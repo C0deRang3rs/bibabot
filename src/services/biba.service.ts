@@ -63,7 +63,8 @@ export default class BibaService extends BaseService {
     }
 
     if (allBibas.length === 1) {
-      message = `Бибу мерял только ${allBibas[0].username}, поэтому он и обсос и король. Если вдруг тебе нужно отключить ежедневную бибу((((((, то используй команду /stop`;
+      message = `Бибу мерял только ${allBibas[0].username}, поэтому он и обсос и король.`
+      + 'Если вдруг тебе нужно отключить ежедневную бибу((((((, то используй команду /stop';
     }
 
     if (allBibas.length > 1) {
