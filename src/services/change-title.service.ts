@@ -10,6 +10,8 @@ import TimerRepository from '../repositories/timer.repo';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
+import { ConfigProperty } from '../types/services/config.service.types';
+import CheckConfig from '../decorators/check.config.decorator';
 
 export default class ChangeTitleService extends BaseService {
   protected static instance: ChangeTitleService;
@@ -95,28 +97,6 @@ export default class ChangeTitleService extends BaseService {
     return ctx.reply('Iteration interval changed');
   }
 
-  @DeleteRequestMessage()
-  @DeleteResponseMessage(10000)
-  public async onStart(ctx: ContextMessageUpdate): Promise<Message> {
-    const chatId = ctx.chat!.id;
-    const isTimerActive = await this.timerRepo.getTimerByChatId(chatId);
-
-    if (isTimerActive) {
-      return ctx.reply('Уже запущен.');
-    }
-
-    await this.changeTitle(chatId);
-    await this.timerRepo.setTimerByChatId(chatId, new Date());
-    return ctx.reply(`Ща как буду раз в ${this.iterationTime} ${this.unitsName} имена менять`);
-  }
-
-  @DeleteRequestMessage()
-  @DeleteResponseMessage(10000)
-  public async onStop(ctx: ContextMessageUpdate): Promise<Message> {
-    await this.timerRepo.removeTimer(ctx.chat!.id);
-    return ctx.reply('Всё, больше не буду');
-  }
-
   public async onRename(ctx: ContextMessageUpdate): Promise<void> {
     if (!ctx.chat) return;
 
@@ -126,16 +106,6 @@ export default class ChangeTitleService extends BaseService {
 
   protected initListeners(): void {
     this.bot.addListeners([
-      {
-        type: BotCommandType.COMMAND,
-        name: ChangeTitleCommandType.START_RENAME,
-        callback: (ctx): Promise<Message> => this.onStart(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
-        name: ChangeTitleCommandType.STOP_RENAME,
-        callback: (ctx): Promise<Message> => this.onStop(ctx),
-      },
       {
         type: BotCommandType.COMMAND,
         name: ChangeTitleCommandType.RENAME,
@@ -149,6 +119,7 @@ export default class ChangeTitleService extends BaseService {
     ]);
   }
 
+  @CheckConfig(ConfigProperty.RENAME)
   private async changeTitle(id: number): Promise<void> {
     const newName = await GenerateNameUtil.generateName();
     console.log(`[${id}] New name: ${newName}`);

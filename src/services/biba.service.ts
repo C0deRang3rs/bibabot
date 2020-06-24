@@ -29,6 +29,8 @@ import {
 import { getUsernameFromContext, getBibaTableText } from '../utils/global.util';
 import GlobalHelper from '../utils/global.helper';
 import UpdateBibaTable from '../decorators/update.biba.table.decorator';
+import CheckConfig from '../decorators/check.config.decorator';
+import { ConfigProperty } from '../types/services/config.service.types';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -156,22 +158,7 @@ export default class BibaService extends BaseService {
     try {
       const chatIds = forcedChatId ? [forcedChatId] : await this.chatRepo.getAllChats();
 
-      await Promise.all(chatIds.map(async (chatId) => {
-        console.log(`[${chatId}] Daily biba`);
-        await this.bibacoinService.dailyIncome(chatId);
-
-        const allBibas = await this.bibaRepo.getAllBibasByChatId(chatId);
-        const message = BibaService.getDailyMessage(allBibas);
-
-        if (!allBibas.length) {
-          await this.bot.app.telegram.sendMessage(chatId, message);
-          return;
-        }
-
-        await this.bot.app.telegram.sendMessage(chatId, message);
-
-        await this.bibaRepo.setAllBibasOutdated(chatId);
-      }));
+      await Promise.all(chatIds.map(async (chatId) => this.triggerDailyBibaForChat(chatId)));
     } catch (err) {
       Bot.handleError(err);
     }
@@ -226,6 +213,24 @@ export default class BibaService extends BaseService {
     }
 
     this.bot.addListeners(commands);
+  }
+
+  @CheckConfig(ConfigProperty.DAILY)
+  private async triggerDailyBibaForChat(chatId: number): Promise<void> {
+    console.log(`[${chatId}] Daily biba`);
+    await this.bibacoinService.dailyIncome(chatId);
+
+    const allBibas = await this.bibaRepo.getAllBibasByChatId(chatId);
+    const message = BibaService.getDailyMessage(allBibas);
+
+    if (!allBibas.length) {
+      await this.bot.app.telegram.sendMessage(chatId, message);
+      return;
+    }
+
+    await this.bot.app.telegram.sendMessage(chatId, message);
+
+    await this.bibaRepo.setAllBibasOutdated(chatId);
   }
 
   @UpdateBibaTable()

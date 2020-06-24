@@ -1,7 +1,9 @@
 export type Config = Record<ConfigProperty, boolean>;
 
 export enum ConfigProperty {
-  MEME_STAT = 'meme_stat'
+  MEME_STAT = 'meme_stat',
+  RENAME = 'rename',
+  DAILY = 'daily',
 }
 
 export enum ConfigAction {
@@ -11,4 +13,6 @@ export enum ConfigAction {
 
 export const DEFAULT_CONFIG: Config = {
   meme_stat: false,
+  rename: false,
+  daily: true,
 };
