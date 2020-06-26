@@ -1,18 +1,27 @@
 export type Config = Record<ConfigProperty, boolean>;
 
 export enum ConfigProperty {
-  MEME_STAT = 'meme_stat',
-  RENAME = 'rename',
-  DAILY = 'daily',
+  MEME_STAT = 'MEME_STAT',
+  RENAME = 'RENAME',
+  DAILY = 'DAILY',
 }
 
 export enum ConfigAction {
-  TURN_ON = 'turn_on',
-  TURN_OFF = 'turn_off',
+  TURN_ON = 'TURN_ON',
+  TURN_OFF = 'TURN_OFF',
 }
 
 export const DEFAULT_CONFIG: Config = {
-  meme_stat: false,
-  rename: false,
-  daily: true,
+  MEME_STAT: false,
+  RENAME: false,
+  DAILY: true,
 };
+
+export enum ConfigPropertyDescription {
+  MEME_STAT = 'Оценка мемов',
+  RENAME = 'Автопереименование конфы',
+  DAILY = 'Ежедневная биба',
+}
+
+// eslint-disable-next-line max-len
+export const getPropertyDescription = (property: ConfigProperty): ConfigPropertyDescription => ConfigPropertyDescription[property] || 'Описания пока нет';

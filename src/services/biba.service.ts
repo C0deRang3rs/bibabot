@@ -3,7 +3,6 @@ import { ContextMessageUpdate, Markup } from 'telegraf';
 
 import { Message } from 'telegraf/typings/telegram-types';
 import { BibaCommand, BibaDebugCommand } from '../types/globals/commands.types';
-import { getProductPrice, getActionByProduct, getPriceByActivity } from '../utils/shop.helper';
 import {
   Biba,
   POSITIVE_BIBA,
@@ -15,7 +14,6 @@ import Bot from '../core/bot';
 import { BotCommandType, BotListener } from '../types/core/bot.types';
 import BibaRepository from '../repositories/biba.repo';
 import ChatRepository from '../repositories/chat.repo';
-import { Product } from '../types/services/shop.service.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
@@ -31,6 +29,8 @@ import GlobalHelper from '../utils/global.helper';
 import UpdateBibaTable from '../decorators/update.biba.table.decorator';
 import CheckConfig from '../decorators/check.config.decorator';
 import { ConfigProperty } from '../types/services/config.service.types';
+import { Product } from '../types/services/shop.service.types';
+import * as shopUtils from '../utils/shop.util';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -87,14 +87,14 @@ export default class BibaService extends BaseService {
 
   @DeleteResponseMessage(10000)
   private static async sendRerollBlockedMessage(ctx: ContextMessageUpdate, username: string): Promise<Message> {
-    const price = getProductPrice(Product.BIBA_REROLL);
+    const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
 
     return ctx.reply(
       `${username} сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
       Markup.inlineKeyboard(
         [Markup.callbackButton(
           `Перемерять бибу 💰${price}¢`,
-          getActionByProduct(Product.BIBA_REROLL),
+          shopUtils.getActionByProduct(Product.BIBA_REROLL),
         )],
       ).extra(),
     );
@@ -144,7 +144,7 @@ export default class BibaService extends BaseService {
     );
 
     if (biba <= 5) {
-      const price = getPriceByActivity(BibacoinActivity.SMALL_PEPE);
+      const price = shopUtils.getPriceByActivity(BibacoinActivity.SMALL_PEPE);
       await this.bibacoinService.addCoins(userId, chatId, price);
       bibaMessage = `${bibaMessage} Не переживай, Фонд Поддержки Неполноценных выделил тебе ${price} бибакоинов`;
     } else if (biba >= 30) {
@@ -242,31 +242,26 @@ export default class BibaService extends BaseService {
     const params = ctx.message!.text!.split(' ');
     const count = parseInt(params[1], 10);
 
-    if (!count) {
-      return GlobalHelper.sendError(ctx, 'Wrong format');
+    try {
+      if (!count) throw new Error('Wrong format');
+      if (count <= 0) throw new Error(`${username} ты не можешь продать меньше 1 см`);
+
+      const biba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
+      if (!biba) throw new Error(`${username} у тебя нет бибы`);
+
+      const newSize = biba.size - count;
+
+      if (newSize < 0) throw new Error(`${username} ты не можешь продать больше, чем отрастил`);
+
+      await this.bibaRepo.setBiba(chatId, { ...biba, size: newSize });
+      const cost = count * shopUtils.getPriceByActivity(BibacoinActivity.BIBA_CM);
+      await this.bibacoinService.addCoins(userId, chatId, cost);
+
+      return ctx.reply(`У ${username} отрезали ${count} см бибы, но взамен он получил ${cost} бибакоинов`);
+    } catch (err) {
+      return GlobalHelper.sendError(ctx, err.message);
     }
-
-    if (count <= 0) {
-      return GlobalHelper.sendError(ctx, `${username} ты не можешь продать меньше 1 см`);
-    }
-
-    const biba = await this.bibaRepo.getBibaByIds(chatId, userId);
-
-    if (!biba) {
-      return GlobalHelper.sendError(ctx, `${username} у тебя нет бибы`);
-    }
-
-    const newSize = biba.size - count;
-
-    if (newSize < 0) {
-      return GlobalHelper.sendError(ctx, `${username} ты не можешь продать больше, чем отрастил`);
-    }
-
-    await this.bibaRepo.setBiba(chatId, { ...biba, size: newSize });
-    const cost = count * getPriceByActivity(BibacoinActivity.BIBA_CM);
-    await this.bibacoinService.addCoins(userId, chatId, cost);
-
-    return ctx.reply(`У ${username} отрезали ${count} см бибы, но взамен он получил ${cost} бибакоинов`);
   }
 
   @UpdateBibaTable()
@@ -274,27 +269,27 @@ export default class BibaService extends BaseService {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
 
-    if (params.length < 1 || params.length > 2) {
-      return GlobalHelper.sendError(ctx, 'Wrong format');
-    }
+    try {
+      if (params.length < 1 || params.length > 2) throw new Error('Wrong format');
 
-    const targetUsername = params[1];
+      const targetUsername = params[1];
 
-    if (targetUsername && targetUsername.includes('@')) {
-      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
+      if (targetUsername && targetUsername.includes('@')) {
+        const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
 
-      if (!targetBiba) {
-        return GlobalHelper.sendError(ctx, 'Wrong user');
+        if (!targetBiba) throw new Error('Wrong user');
+
+        await this.bibaRepo.removeBiba(chatId, targetBiba.userId);
+      } else if (targetUsername && !targetUsername.includes('@')) {
+        throw new Error('Wrong format');
+      } else {
+        await this.bibaRepo.removeBiba(chatId, ctx.from!.id);
       }
 
-      await this.bibaRepo.removeBiba(chatId, targetBiba.userId);
-    } else if (targetUsername && !targetUsername.includes('@')) {
-      return GlobalHelper.sendError(ctx, 'Wrong format');
-    } else {
-      await this.bibaRepo.removeBiba(chatId, ctx.from!.id);
+      return ctx.reply('Done');
+    } catch (err) {
+      return GlobalHelper.sendError(ctx, err.message);
     }
-
-    return ctx.reply('Done');
   }
 
   @UpdateBibaTable()
@@ -302,33 +297,31 @@ export default class BibaService extends BaseService {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
 
-    if (params.length < 2 || params.length > 3) {
-      return GlobalHelper.sendError(ctx, 'Wrong format');
-    }
+    try {
+      if (params.length < 2 || params.length > 3) throw new Error('Wrong format');
 
-    const size = parseInt(params[1], 10);
-    const targetUsername = params[2];
+      const size = parseInt(params[1], 10);
+      const targetUsername = params[2];
 
-    if (targetUsername && targetUsername.includes('@')) {
-      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
+      if (targetUsername && targetUsername.includes('@')) {
+        const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
 
-      if (!targetBiba) {
-        return GlobalHelper.sendError(ctx, 'Wrong user');
+        if (!targetBiba) throw new Error('Wrong user');
+
+        await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
+      } else if (targetUsername && !targetUsername.includes('@')) {
+        throw new Error('Wrong format');
+      } else {
+        const targetBiba = await this.bibaRepo.getBibaByIds(chatId, ctx.from!.id);
+
+        if (!targetBiba) throw new Error('У этого пользователя нет бибы');
+
+        await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
       }
 
-      await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
-    } else if (targetUsername && !targetUsername.includes('@')) {
-      return GlobalHelper.sendError(ctx, 'Wrong format');
-    } else {
-      const targetBiba = await this.bibaRepo.getBibaByIds(chatId, ctx.from!.id);
-
-      if (!targetBiba) {
-        return GlobalHelper.sendError(ctx, 'У этого пользователя нет бибы');
-      }
-
-      await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
+      return ctx.reply('Done');
+    } catch (err) {
+      return GlobalHelper.sendError(ctx, err.message);
     }
-
-    return ctx.reply('Done');
   }
 }

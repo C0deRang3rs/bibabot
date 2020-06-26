@@ -31,12 +31,13 @@ export default class TrashService extends BaseService {
   }
 
   public static async trashHandler(ctx: ContextMessageUpdate, next: Function | undefined): Promise<Function> {
-    if (!ctx.message || !ctx.message.text) return next!();
+    if (!ctx.message || !ctx.message.text || !ctx.message.from) return next!();
 
     const msg = ctx.message.text.toLowerCase();
+    const name = ctx.message.from.first_name;
 
     if (FUCK_TRIGGERS.some((s) => msg.includes(s))) await ctx.reply('Сам иди нахуй');
-    if (msg.includes('соси')) await ctx.reply('Сам соси!');
+    if (msg.includes('соси')) await ctx.reply(name ? `Сам соси, ${name}!` : 'Сам соси!');
     if (msg === 'да') await ctx.reply('пизда');
     if (msg === 'нет ты') await ctx.reply('Нет ты');
     if (msg.includes('один хуй')) await ctx.reply('Не "один хуй", а "однохуйственно". Учи рузкий блядь');

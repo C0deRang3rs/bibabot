@@ -3,7 +3,7 @@ import { Message, InlineKeyboardMarkup } from 'telegraf/typings/telegram-types';
 import BaseService from './base.service';
 import { BotCommandType, BotListener } from '../types/core/bot.types';
 import { ConfigCommand } from '../types/globals/commands.types';
-import { ConfigAction, ConfigProperty } from '../types/services/config.service.types';
+import { ConfigAction, ConfigProperty, getPropertyDescription } from '../types/services/config.service.types';
 import ConfigRepository from '../repositories/config.repo';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
@@ -27,19 +27,6 @@ export default class ConfigService extends BaseService {
     return ConfigService.instance;
   }
 
-  private static getPropertyDescription(property: ConfigProperty, status: boolean): string {
-    let message = '';
-
-    switch (property) {
-      case ConfigProperty.MEME_STAT: message = 'Оценка мемов'; break;
-      case ConfigProperty.RENAME: message = 'Автопереименование конфы'; break;
-      case ConfigProperty.DAILY: message = 'Ежедневная биба'; break;
-      default: return 'No description';
-    }
-
-    return `${message} - ${status ? 'ON' : 'OFF'}`;
-  }
-
   public async checkProperty(chatId: number, property: ConfigProperty): Promise<boolean> {
     const config = await this.configRepo.getConfigByChatId(chatId);
 
@@ -59,13 +46,13 @@ export default class ConfigService extends BaseService {
     Object.keys(ConfigProperty).map((key) => {
       listeners.push({
         type: BotCommandType.ACTION,
-        name: `${ConfigAction.TURN_ON}_${key.toLowerCase()}`,
-        callback: (ctx): Promise<void> => this.switchProperty(ctx, key.toLowerCase() as ConfigProperty, true),
+        name: `${ConfigAction.TURN_ON}_${key}`,
+        callback: (ctx): Promise<void> => this.switchProperty(ctx, key as ConfigProperty, true),
       });
       listeners.push({
         type: BotCommandType.ACTION,
-        name: `${ConfigAction.TURN_OFF}_${key.toLowerCase()}`,
-        callback: (ctx): Promise<void> => this.switchProperty(ctx, key.toLowerCase() as ConfigProperty, false),
+        name: `${ConfigAction.TURN_OFF}_${key}`,
+        callback: (ctx): Promise<void> => this.switchProperty(ctx, key as ConfigProperty, false),
       });
     });
 
@@ -75,8 +62,10 @@ export default class ConfigService extends BaseService {
   private async switchProperty(ctx: ContextMessageUpdate, property: ConfigProperty, value: boolean): Promise<void> {
     const chatId = ctx.chat!.id;
     const { message } = ctx.update.callback_query!;
+
     const config = await this.configRepo.getConfigByChatId(chatId);
     config[property] = value;
+
     await this.configRepo.setConfigByChatId(chatId, config);
     await this.updateMenu(chatId, message!.message_id);
   }
@@ -95,7 +84,7 @@ export default class ConfigService extends BaseService {
 
     return Markup.inlineKeyboard([
       ...Object.keys(config).map((property) => [Markup.callbackButton(
-        ConfigService.getPropertyDescription(property as ConfigProperty, config[property as ConfigProperty]),
+        `${getPropertyDescription(property as ConfigProperty)} - ${config[property as ConfigProperty] ? 'ON' : 'OFF'}`,
         config[property as ConfigProperty] ? `${ConfigAction.TURN_OFF}_${property}` : `${ConfigAction.TURN_ON}_${property}`,
       )]),
     ]);

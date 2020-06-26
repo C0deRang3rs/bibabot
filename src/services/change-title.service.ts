@@ -3,7 +3,6 @@ import Bull from 'bull';
 import { Message } from 'telegraf/typings/telegram-types';
 import GenerateNameUtil from '../utils/generate-name.util';
 import { ChangeTitleCommandType } from '../types/globals/commands.types';
-import { TimerUnits } from '../types/services/change-title.service.types';
 import Bot from '../core/bot';
 import { BotCommandType } from '../types/core/bot.types';
 import TimerRepository from '../repositories/timer.repo';
@@ -12,18 +11,19 @@ import DeleteRequestMessage from '../decorators/delete.request.message.decorator
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 import { ConfigProperty } from '../types/services/config.service.types';
 import CheckConfig from '../decorators/check.config.decorator';
+import { TimerUnit, TimerUnitName } from '../types/services/change-title.service.types';
 
 export default class ChangeTitleService extends BaseService {
   protected static instance: ChangeTitleService;
-  private iterationUnits = TimerUnits.HOURS;
+  private iterationUnits = TimerUnit.HOURS;
   private iterationTime = 12;
 
   get unitsName(): string {
     switch (this.iterationUnits) {
-      case TimerUnits.HOURS:
+      case TimerUnit.HOURS:
         return this.iterationTime === 1 ? 'час'
           : this.iterationTime >= 2 && this.iterationTime <= 4 ? 'часа' : 'часов';
-      case TimerUnits.MINUTES:
+      case TimerUnit.MINUTES:
         return this.iterationTime === 1 ? 'минуту'
           : this.iterationTime >= 2 && this.iterationTime <= 4 ? 'минуты' : 'минут';
       default: return '';
@@ -72,11 +72,11 @@ export default class ChangeTitleService extends BaseService {
     const commandData = ctx.message!.text!.split(' ');
 
     switch (commandData[2]) {
-      case 'hours':
-        this.iterationUnits = TimerUnits.HOURS;
+      case TimerUnitName.HOURS:
+        this.iterationUnits = TimerUnit.HOURS;
         break;
-      case 'minutes':
-        this.iterationUnits = TimerUnits.MINUTES;
+      case TimerUnitName.MINUTES:
+        this.iterationUnits = TimerUnit.MINUTES;
         break;
       default: return ctx.reply('Wrong time format, try something like: 2 hours, 5 minutes, 1 hours (lmao)');
     }

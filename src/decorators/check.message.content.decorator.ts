@@ -1,7 +1,6 @@
 import { ContextMessageUpdate } from 'telegraf';
 import { MessageContent } from '../types/globals/message.types';
 
-// eslint-disable-next-line max-len
 const CheckMessageContent = (type: MessageContent) => (_target: object, _propKey: string, desc: PropertyDescriptor): void => {
   const method: Function = desc.value;
 

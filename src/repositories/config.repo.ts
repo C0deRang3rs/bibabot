@@ -11,6 +11,25 @@ export default class ConfigRepository extends BaseRepository {
     return JSON.stringify(currentConfigKeys) !== JSON.stringify(defaultConfigKeys);
   }
 
+  public async migrate(): Promise<void> {
+    const configKeys = await this.redis.keysAsync(`${this.entityName}:*`);
+
+    if (!configKeys) return;
+
+    await Promise.all(configKeys.map(async (redisKey) => {
+      const rawConfig = await this.redis.getAsync(redisKey);
+      const config = JSON.parse(rawConfig!);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const newConfig = {} as any;
+
+      Object.keys(config).forEach((key) => {
+        newConfig[key.toUpperCase()] = config[key];
+      });
+
+      await this.redis.setAsync(redisKey, JSON.stringify(newConfig));
+    }));
+  }
+
   public async getConfigByChatId(chatId: number): Promise<Config> {
     const config = await this.redis.getAsync(`${this.entityName}:${chatId}`);
 
