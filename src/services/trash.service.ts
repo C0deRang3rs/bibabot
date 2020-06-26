@@ -36,7 +36,7 @@ export default class TrashService extends BaseService {
     const msg = ctx.message.text.toLowerCase();
     const name = ctx.message.from.first_name;
 
-    if (FUCK_TRIGGERS.some((s) => msg.includes(s))) await ctx.reply('Сам иди нахуй');
+    if (FUCK_TRIGGERS.some((s) => msg.includes(s))) await ctx.reply(name ? `Сам иди нахуй, ${name}` : 'Сам иди нахуй');
     if (msg.includes('соси')) await ctx.reply(name ? `Сам соси, ${name}!` : 'Сам соси!');
     if (msg === 'да') await ctx.reply('пизда');
     if (msg === 'нет ты') await ctx.reply('Нет ты');
