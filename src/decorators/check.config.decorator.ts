@@ -6,11 +6,19 @@ const CheckConfig = (property: ConfigProperty) => (_target: object, _propKey: st
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
-  desc.value = async function wrapped(...args: ContextMessageUpdate[] | number[]): Promise<void> {
-    const chatId = typeof args[0] === 'number' ? args[0] : args[0].chat!.id;
-    const isAllowed = await ConfigService.getInstance().checkProperty(chatId, property);
+  desc.value = async function wrapped(...args: Array<ContextMessageUpdate | number | Function>): Promise<void> {
+    let chatId: number;
+
+    switch (typeof args[0]) {
+      case 'number': chatId = args[0]; break;
+      case "object": chatId = args[0].chat!.id
+    }
+    
+    const nextMethod = args[1];
+    const isAllowed = await ConfigService.getInstance().checkProperty(chatId!, property);
 
     if (!isAllowed) {
+      if (nextMethod && typeof nextMethod === 'function') return nextMethod();
       return;
     }
 

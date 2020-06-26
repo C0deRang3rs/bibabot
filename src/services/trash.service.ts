@@ -10,6 +10,8 @@ import DeleteRequestMessage from '../decorators/delete.request.message.decorator
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import GlobalHelper from '../utils/global.helper';
 import { getUsernameFromContext } from '../utils/global.util';
+import { ConfigProperty } from '../types/services/config.service.types';
+import CheckConfig from '../decorators/check.config.decorator';
 
 export default class TrashService extends BaseService {
   private static instance: TrashService;
@@ -30,6 +32,7 @@ export default class TrashService extends BaseService {
     return TrashService.instance;
   }
 
+  @CheckConfig(ConfigProperty.TRASH_REPLY)
   public static async trashHandler(ctx: ContextMessageUpdate, next: Function | undefined): Promise<Function> {
     if (!ctx.message || !ctx.message.text || !ctx.message.from) return next!();
 
