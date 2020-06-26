@@ -5,6 +5,6 @@ export const FUCK_TRIGGERS = [
 ];
 
 export enum CoinSide {
-  TAILS = 'TAILS',
-  HEADS = 'HEADS',
+  TAILS = 'tails',
+  HEADS = 'heads',
 }

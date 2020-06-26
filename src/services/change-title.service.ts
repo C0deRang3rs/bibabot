@@ -51,10 +51,8 @@ export default class ChangeTitleService extends BaseService {
 
     await Promise.all(Object.keys(objectedTimers).map(async (id: string) => {
       if (this.isRenameNeeded(objectedTimers[id])) {
-        console.log(`[${id}] Auto-rename`);
-
         try {
-          await this.changeTitle(parseInt(id, 10));
+          await this.changeTitle(parseInt(id, 10), true);
         } catch (err) {
           Bot.handleError(err);
         }
@@ -100,8 +98,7 @@ export default class ChangeTitleService extends BaseService {
   public async onRename(ctx: ContextMessageUpdate): Promise<void> {
     if (!ctx.chat) return;
 
-    await this.changeTitle(ctx.chat.id);
-    console.log(`[${ctx.chat.id}] Renamed`);
+    await this.changeTitle(ctx.chat.id, false);
   }
 
   protected initListeners(): void {
@@ -120,9 +117,9 @@ export default class ChangeTitleService extends BaseService {
   }
 
   @CheckConfig(ConfigProperty.RENAME)
-  private async changeTitle(id: number): Promise<void> {
+  private async changeTitle(id: number, auto: boolean): Promise<void> {
     const newName = await GenerateNameUtil.generateName();
-    console.log(`[${id}] New name: ${newName}`);
+    console.log(`[${id}]${auto ? ' Auto-rename.' : ''} New name: ${newName}`);
     await this.bot.app.telegram.setChatTitle(id, newName);
   }
 
