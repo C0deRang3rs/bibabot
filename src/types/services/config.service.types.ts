@@ -4,6 +4,7 @@ export enum ConfigProperty {
   MEME_STAT = 'meme_stat',
   RENAME = 'rename',
   DAILY = 'daily',
+  TRASH_REPLY = 'trash_reply',
 }
 
 export enum ConfigAction {
@@ -15,4 +16,5 @@ export const DEFAULT_CONFIG: Config = {
   meme_stat: false,
   rename: false,
   daily: true,
+  trash_reply: true,
 };

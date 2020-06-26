@@ -34,6 +34,7 @@ export default class ConfigService extends BaseService {
       case ConfigProperty.MEME_STAT: message = 'Оценка мемов'; break;
       case ConfigProperty.RENAME: message = 'Автопереименование конфы'; break;
       case ConfigProperty.DAILY: message = 'Ежедневная биба'; break;
+      case ConfigProperty.TRASH_REPLY: message = 'Интересные конкурсы'; break;
       default: return 'No description';
     }
 
