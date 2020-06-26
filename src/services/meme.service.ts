@@ -5,12 +5,12 @@ import { BotCommandType } from '../types/core/bot.types';
 import MemeRepository from '../repositories/meme.repo';
 import { MemeAction, MemeStatResult, MemeStatStatus } from '../types/services/meme.service.types';
 import BibacoinService from './bibacoin.service';
-import { getPriceByActivity } from '../utils/shop.helper';
 import { BibacoinActivity } from '../types/services/bibacoin.service.types';
 import CheckConfig from '../decorators/check.config.decorator';
 import { ConfigProperty } from '../types/services/config.service.types';
 import CheckMessageContent from '../decorators/check.message.content.decorator';
 import { MessageContent } from '../types/globals/message.types';
+import * as shopUtils from '../utils/shop.util';
 
 export default class MemeService extends BaseService {
   private static instance: MemeService;
@@ -76,7 +76,7 @@ export default class MemeService extends BaseService {
     const chatId = ctx.chat!.id;
     const messageId = message!.message_id;
     const userId = ctx.from!.id;
-    const price = getPriceByActivity(BibacoinActivity.MEME_LIKE);
+    const price = shopUtils.getPriceByActivity(BibacoinActivity.MEME_LIKE);
     let response: MemeStatResult;
 
     switch (actionType) {

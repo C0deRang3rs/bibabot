@@ -24,8 +24,3 @@ export interface TelegramFull extends Telegram {
 export interface TelegrafFull extends Telegraf<ContextMessageUpdate> {
   telegram: TelegramFull;
 }
-
-export enum UserType {
-  MEMBER = 'member',
-  ADMINISTRATOR = 'administrator',
-}

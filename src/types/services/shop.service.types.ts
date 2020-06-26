@@ -1,19 +1,30 @@
 export enum Product {
-  BIBA_CM = 'biba_cm',
-  BIBA_REROLL = 'biba_reroll',
+  BIBA_CM = 'BIBA_CM',
+  BIBA_REROLL = 'BIBA_REROLL',
 }
 
 export enum ShopAction {
-  BUY_CM = 'buy_cm',
-  BUY_REROLL = 'buy_reroll',
+  BIBA_CM = 'BUY_CM',
+  BIBA_REROLL = 'BUY_REROLL',
 }
 
-export const ProductPrice: Record<Product, number> = {
-  [Product.BIBA_CM]: 15,
-  [Product.BIBA_REROLL]: 50,
-};
+export enum ProductPrice {
+  BIBA_CM = 15,
+  BIBA_REROLL = 50,
+}
 
-export const ProductToActionMap: Record<Product, ShopAction> = {
-  [Product.BIBA_CM]: ShopAction.BUY_CM,
-  [Product.BIBA_REROLL]: ShopAction.BUY_REROLL,
-};
+export enum ProductActionContext {
+  BIBA_CM = '+1 см бибы',
+  BIBA_REROLL = 'Перемерять бибу',
+}
+
+export enum ActivityContext {
+  MESSAGE = 'Сообщение',
+  PHOTO = 'Картинка',
+  VOICE = 'Стикер',
+  STICKER = 'Видос',
+  VIDEO = 'Войс',
+  SMALL_PEPE = 'Один см бибы',
+  BIBA_CM = 'Маленькая биба',
+  MEME_LIKE = 'Лайк на мем',
+}

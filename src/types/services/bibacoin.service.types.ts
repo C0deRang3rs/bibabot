@@ -10,19 +10,19 @@ export enum BibacoinActivity {
 }
 
 export enum BibacoinAction {
-  BALANCE = 'balance',
+  BALANCE = 'BALANCE',
 }
 
-export const BibacoinCredit: Record<BibacoinActivity, number> = {
-  [BibacoinActivity.MESSAGE]: 1,
-  [BibacoinActivity.PHOTO]: 2,
-  [BibacoinActivity.VOICE]: -1,
-  [BibacoinActivity.STICKER]: 1,
-  [BibacoinActivity.VIDEO]: 2,
-  [BibacoinActivity.SMALL_PEPE]: 20,
-  [BibacoinActivity.BIBA_CM]: 1,
-  [BibacoinActivity.MEME_LIKE]: 2,
-};
+export enum BibacoinCredit {
+  MESSAGE = 1,
+  PHOTO = 2,
+  VOICE = -1,
+  STICKER = 1,
+  VIDEO = 2,
+  SMALL_PEPE = 20,
+  BIBA_CM = 1,
+  MEME_LIKE = 2,
+}
 
 export const ZERO_BALANCE = 'Пока что у тебя нет бибакоинов, ты можешь получить их за любую активность в чате';
 export const NO_BIBA_TO_BUY = 'У тебя нет бибы, так что увеличивать нечего';
