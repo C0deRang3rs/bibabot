@@ -24,7 +24,7 @@ export const getPriceByActivity = (activity: BibacoinActivity): number => Bibaco
 
 export const getActivitiesList = (): Array<BibacoinActivity> => Object.keys(BibacoinActivity) as Array<BibacoinActivity>;
 
-export const getProductsList = (): Array<Product> => Object.keys(ProductPrice) as Array<Product>;
+export const getProductsList = (): Array<Product> => Object.keys(Product) as Array<Product>;
 
 export const getPriceByMessage = (message: IncomingMessage): number => getPriceByActivity(getActivityByMessageContent(message));
 
