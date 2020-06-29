@@ -86,8 +86,14 @@ export default class ShopService extends BaseService {
       await this.bibacoinService.hasEnoughCredits(userId, chatId, price);
 
       const currentBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
       if (!currentBiba) {
         await ctx.answerCbQuery(NO_BIBA_TO_REROLL);
+        return;
+      }
+
+      if (currentBiba.outdated) {
+        await ctx.answerCbQuery('Биба уже пованивает, обнови её с помощью /biba');
         return;
       }
 
@@ -110,8 +116,14 @@ export default class ShopService extends BaseService {
       await this.bibacoinService.hasEnoughCredits(userId, chatId, price);
 
       const currentBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
       if (!currentBiba) {
         await ctx.answerCbQuery(NO_BIBA_TO_BUY);
+        return;
+      }
+
+      if (currentBiba.outdated) {
+        await ctx.answerCbQuery('Биба уже пованивает, обнови её с помощью /biba');
         return;
       }
 
