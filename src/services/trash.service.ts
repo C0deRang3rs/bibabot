@@ -8,8 +8,11 @@ import { FUCK_TRIGGERS, CoinSide } from '../types/services/trash.service.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
-import GlobalHelper from '../utils/global.helper';
 import { getUsernameFromContext } from '../utils/global.util';
+import { ConfigProperty } from '../types/services/config.service.types';
+import CheckConfig from '../decorators/check.config.decorator';
+import ReplyWithError from '../decorators/reply.with.error.decorator';
+import RepliableError from '../types/globals/repliable.error';
 
 export default class TrashService extends BaseService {
   private static instance: TrashService;
@@ -30,13 +33,15 @@ export default class TrashService extends BaseService {
     return TrashService.instance;
   }
 
+  @CheckConfig(ConfigProperty.TRASH_REPLY)
   public static async trashHandler(ctx: ContextMessageUpdate, next: Function | undefined): Promise<Function> {
-    if (!ctx.message || !ctx.message.text) return next!();
+    if (!ctx.message || !ctx.message.text || !ctx.message.from) return next!();
 
     const msg = ctx.message.text.toLowerCase();
+    const name = ctx.message.from.first_name;
 
-    if (FUCK_TRIGGERS.some((s) => msg.includes(s))) await ctx.reply('Сам иди нахуй');
-    if (msg.includes('соси')) await ctx.reply('Сам соси!');
+    if (FUCK_TRIGGERS.some((s) => msg.includes(s))) await ctx.reply(name ? `Сам иди нахуй, ${name}` : 'Сам иди нахуй');
+    if (msg.includes('соси')) await ctx.reply(name ? `Сам соси, ${name}!` : 'Сам соси!');
     if (msg === 'да') await ctx.reply('пизда');
     if (msg === 'нет ты') await ctx.reply('Нет ты');
     if (msg.includes('один хуй')) await ctx.reply('Не "один хуй", а "однохуйственно". Учи рузкий блядь');
@@ -46,6 +51,7 @@ export default class TrashService extends BaseService {
     return next!();
   }
 
+  @ReplyWithError()
   @DeleteRequestMessage()
   private static async roll(ctx: ContextMessageUpdate): Promise<Message> {
     const username = getUsernameFromContext(ctx);
@@ -61,11 +67,11 @@ export default class TrashService extends BaseService {
       const max = parseInt(parameters[1], 10);
 
       if (!min || !max) {
-        return GlobalHelper.sendError(ctx, 'Wrong format');
+        throw new RepliableError('Wrong format', ctx);
       }
 
       if (!Number.isInteger(min) || !Number.isInteger(max)) {
-        return GlobalHelper.sendError(ctx, 'Wrong data');
+        throw new RepliableError('Wrong data', ctx);
       }
 
       from = min;

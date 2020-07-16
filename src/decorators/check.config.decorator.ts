@@ -6,12 +6,23 @@ const CheckConfig = (property: ConfigProperty) => (_target: object, _propKey: st
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
-  desc.value = async function wrapped(...args: ContextMessageUpdate[]): Promise<void> {
-    const chatId = args[0].chat!.id;
-    const isAllowed = await ConfigService.getInstance().checkProperty(chatId, property);
+  desc.value = async function wrapped(...args: Array<ContextMessageUpdate | number | Function>): Promise<void> {
+    let chatId: number;
+
+    switch (typeof args[0]) {
+      case 'number': [chatId] = args; break;
+      case 'object': chatId = args[0].chat!.id; break;
+      default: return;
+    }
+
+    const secondArgument = args[1];
+    const isAllowed = await ConfigService.getInstance().checkProperty(chatId!, property);
 
     if (!isAllowed) {
-      throw new Error('This command is not allowed on this chat');
+      if (secondArgument && typeof secondArgument === 'function') secondArgument();
+      if (typeof secondArgument !== 'boolean' || (typeof secondArgument !== 'boolean' && secondArgument)) {
+        return;
+      }
     }
 
     await method.apply(this, args);

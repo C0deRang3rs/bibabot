@@ -1,5 +1,9 @@
-// eslint-disable-next-line import/prefer-default-export
-export enum TimerUnits {
+export enum TimerUnit {
   MINUTES = 60000,
   HOURS = 3600000
+}
+
+export enum TimerUnitName {
+  HOURS = 'hours',
+  MINUTES = 'minutes',
 }

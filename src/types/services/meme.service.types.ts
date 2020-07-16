@@ -1,6 +1,6 @@
 export enum MemeAction {
-  LIKE = 'like',
-  DISLIKE = 'dislike',
+  LIKE = 'LIKE',
+  DISLIKE = 'DISLIKE',
 }
 
 export interface Stat {

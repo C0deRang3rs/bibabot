@@ -4,18 +4,19 @@ import { BotCommandType } from '../types/core/bot.types';
 import {
   NO_BIBA_TO_REROLL, NO_BIBA_TO_BUY, BibacoinAction,
 } from '../types/services/bibacoin.service.types';
-import {
-  getProductPrice, getProductsList, getProductActionContext, getActionByProduct,
-} from '../utils/shop.helper';
 import BibacoinService from './bibacoin.service';
 import BibaService from './biba.service';
 import BibaRepository from '../repositories/biba.repo';
-import { ShopAction, Product } from '../types/services/shop.service.types';
+import {
+  ShopAction,
+  Product,
+} from '../types/services/shop.service.types';
 import { ShopCommand } from '../types/globals/commands.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import UpdateBibaTable from '../decorators/update.biba.table.decorator';
+import * as shopUtils from '../utils/shop.util';
 
 export default class ShopService extends BaseService {
   private static instance: ShopService;
@@ -43,14 +44,14 @@ export default class ShopService extends BaseService {
   @DeleteRequestMessage()
   @DeleteLastMessage('shop')
   private static async sendProductsList(ctx: ContextMessageUpdate): Promise<Message> {
-    const list = getProductsList();
+    const list = shopUtils.getProductsList();
 
     return ctx.reply(
       'За бибакоины можно купить:',
       Markup.inlineKeyboard([
         ...list.map((product) => [Markup.callbackButton(
-          getProductActionContext(product),
-          getActionByProduct(product),
+          shopUtils.getProductActionContext(product),
+          shopUtils.getActionByProduct(product),
         )]),
         [Markup.callbackButton('Проверить баланс', BibacoinAction.BALANCE)],
       ]).extra(),
@@ -61,12 +62,12 @@ export default class ShopService extends BaseService {
     this.bot.addListeners([
       {
         type: BotCommandType.ACTION,
-        name: ShopAction.BUY_CM,
+        name: ShopAction.BIBA_CM,
         callback: (ctx): Promise<void> => this.buyOneCM(ctx),
       },
       {
         type: BotCommandType.ACTION,
-        name: ShopAction.BUY_REROLL,
+        name: ShopAction.BIBA_REROLL,
         callback: (ctx): Promise<void> => this.buyReroll(ctx),
       },
       {
@@ -79,14 +80,20 @@ export default class ShopService extends BaseService {
 
   private async buyReroll(ctx: ContextMessageUpdate): Promise<void> {
     try {
-      const price = getProductPrice(Product.BIBA_REROLL);
+      const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
       const chatId = ctx.chat!.id;
       const userId = ctx.from!.id;
       await this.bibacoinService.hasEnoughCredits(userId, chatId, price);
 
       const currentBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
       if (!currentBiba) {
         await ctx.answerCbQuery(NO_BIBA_TO_REROLL);
+        return;
+      }
+
+      if (currentBiba.outdated) {
+        await ctx.answerCbQuery('Биба уже пованивает, обнови её с помощью /biba');
         return;
       }
 
@@ -103,14 +110,20 @@ export default class ShopService extends BaseService {
   @UpdateBibaTable()
   private async buyOneCM(ctx: ContextMessageUpdate): Promise<void> {
     try {
-      const price = getProductPrice(Product.BIBA_CM);
+      const price = shopUtils.getProductPrice(Product.BIBA_CM);
       const chatId = ctx.chat!.id;
       const userId = ctx.from!.id;
       await this.bibacoinService.hasEnoughCredits(userId, chatId, price);
 
       const currentBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
       if (!currentBiba) {
         await ctx.answerCbQuery(NO_BIBA_TO_BUY);
+        return;
+      }
+
+      if (currentBiba.outdated) {
+        await ctx.answerCbQuery('Биба уже пованивает, обнови её с помощью /biba');
         return;
       }
 

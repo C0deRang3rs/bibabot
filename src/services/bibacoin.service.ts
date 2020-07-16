@@ -1,21 +1,22 @@
 import { ContextMessageUpdate } from 'telegraf';
 import { Message } from 'telegraf/typings/telegram-types';
 import {
-  ZERO_BALANCE, BibacoinAction, NO_BIBA_NO_TRADE, DAILY_BIBACOINT_INCOME_PERCENT,
+  ZERO_BALANCE,
+  BibacoinAction,
+  NO_BIBA_NO_TRADE,
+  DAILY_BIBACOINT_INCOME_PERCENT,
+  MAX_DAILY_BIBACOINT_INCOME,
 } from '../types/services/bibacoin.service.types';
 import { BibacoinCommand, BibacoinDebugCommand } from '../types/globals/commands.types';
-import {
-  getPriceByMessage,
-  getActivitiesList,
-  getActivityContext,
-} from '../utils/shop.helper';
 import { BotListener, BotCommandType } from '../types/core/bot.types';
 import BibacoinRepository from '../repositories/bibacoin.repo';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import BibaRepository from '../repositories/biba.repo';
-import GlobalHelper from '../utils/global.helper';
+import * as shopUtils from '../utils/shop.util';
+import ReplyWithError from '../decorators/reply.with.error.decorator';
+import RepliableError from '../types/globals/repliable.error';
 
 export default class BibacoinService extends BaseService {
   private static instance: BibacoinService;
@@ -41,9 +42,9 @@ export default class BibacoinService extends BaseService {
   @DeleteRequestMessage()
   @DeleteLastMessage('income')
   private static async sendIncomeList(ctx: ContextMessageUpdate): Promise<Message> {
-    const list = getActivitiesList();
+    const list = shopUtils.getActivitiesList();
 
-    return ctx.reply(list.map((activity) => `${getActivityContext(activity)}`).join('\n'));
+    return ctx.reply(list.map((activity) => `${shopUtils.getActivityContext(activity)}`).join('\n'));
   }
 
   public async addMessageCoins(ctx: ContextMessageUpdate, next: Function | undefined): Promise<Function> {
@@ -51,7 +52,7 @@ export default class BibacoinService extends BaseService {
 
     const chatId = ctx.chat!.id;
     const userId = ctx.message.from!.id;
-    const messagePrice = getPriceByMessage(ctx.message);
+    const messagePrice = shopUtils.getPriceByMessage(ctx.message);
 
     await this.addCoins(userId, chatId, messagePrice);
 
@@ -61,10 +62,17 @@ export default class BibacoinService extends BaseService {
   public async dailyIncome(chatId: number): Promise<void> {
     const balances = await this.bibacoinRepo.getAllBalancesByChatId(chatId);
     await Promise.all(Object.keys(balances).map(async (userId) => {
+      const currentBalance = balances[userId];
+      let newBalance = currentBalance * ((100 + DAILY_BIBACOINT_INCOME_PERCENT) / 100);
+
+      if (newBalance - currentBalance > MAX_DAILY_BIBACOINT_INCOME) {
+        newBalance = currentBalance + MAX_DAILY_BIBACOINT_INCOME;
+      }
+
       await this.bibacoinRepo.setBibacoinBalance(
         chatId,
         parseInt(userId, 10),
-        (balances[userId] * ((100 + DAILY_BIBACOINT_INCOME_PERCENT) / 100)).toFixed(),
+        newBalance.toFixed(),
       );
     }));
   }
@@ -123,47 +131,32 @@ export default class BibacoinService extends BaseService {
   }
 
   @DeleteRequestMessage()
+  @ReplyWithError()
   private async giveCoins(ctx: ContextMessageUpdate): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
     const fromUserId = ctx.from!.id;
     const username = params[1];
     const count = parseFloat(params[2]);
-
-    if (!username || count === undefined || Number.isNaN(count)) {
-      return GlobalHelper.sendError(ctx, 'Wrong format');
-    }
-
-    if (count % 1 !== 0) {
-      return GlobalHelper.sendError(ctx, 'Нельзя передвать дробное количество бибакоинов');
-    }
+    if (!username || count === undefined || Number.isNaN(count)) throw new RepliableError('Wrong format', ctx);
+    if (count % 1 !== 0) throw new RepliableError('Нельзя передавать дробное количество бибакоинов', ctx);
 
     const fromUser = await this.bibaRepo.getBibaByIds(chatId, fromUserId);
 
-    if (!fromUser) {
-      return GlobalHelper.sendError(ctx, NO_BIBA_NO_TRADE);
-    }
-
-    if (count <= 0) {
-      return GlobalHelper.sendError(ctx, `${fromUser.username} нельзя передать меньше 1 бибакоина`);
-    }
+    if (!fromUser) throw new RepliableError(NO_BIBA_NO_TRADE, ctx);
+    if (count <= 0) throw new RepliableError(`${fromUser.username} нельзя передать меньше 1 бибакоина`, ctx);
 
     const toUser = await this.bibaRepo.findBibaByUsernameInChat(chatId, username);
 
-    if (!toUser) {
-      return GlobalHelper.sendError(ctx, NO_BIBA_NO_TRADE);
-    }
-
+    if (!toUser) throw new RepliableError(NO_BIBA_NO_TRADE, ctx);
     if (fromUser.username === toUser.username) {
-      return GlobalHelper.sendError(ctx, `${fromUser.username} ты не можешь передать коины самому себе`);
+      throw new RepliableError(`${fromUser.username} ты не можешь передать коины самому себе`, ctx);
     }
 
     const fromUserBalance = await this.bibacoinRepo.getBibacoinBalanceByIds(chatId, fromUserId);
     const fromUserNewBalance = fromUserBalance - count;
 
-    if (fromUserNewBalance < 0) {
-      return GlobalHelper.sendError(ctx, `${fromUser.username} ты не можешь отдать больше, чем у тебя есть`);
-    }
+    if (fromUserNewBalance < 0) throw new RepliableError(`${fromUser.username} ты не можешь отдать больше, чем у тебя есть`, ctx);
 
     await this.bibacoinRepo.setBibacoinBalance(chatId, fromUserId, fromUserNewBalance);
     await this.addCoins(toUser.userId, chatId, count);

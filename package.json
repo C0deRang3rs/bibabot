@@ -47,7 +47,9 @@
     "eslint-plugin-import": "2.20.1",
     "jest": "25.2.3",
     "ts-jest": "25.2.1",
-    "tsc-watch": "^4.2.3"
+    "tsc-watch": "4.2.3"
   },
-  "eslintIgnore": ["__tests__/*"]
+  "eslintIgnore": [
+    "__tests__/*"
+  ]
 }
