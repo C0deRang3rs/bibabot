@@ -1,3 +1,5 @@
+Telegram: @randomChatName_bot
+
 Open-source bot for biba measuring and so on.
 
 "Biba" means pepe
