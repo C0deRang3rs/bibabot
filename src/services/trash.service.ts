@@ -8,10 +8,11 @@ import { FUCK_TRIGGERS, CoinSide } from '../types/services/trash.service.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
-import GlobalHelper from '../utils/global.helper';
 import { getUsernameFromContext } from '../utils/global.util';
 import { ConfigProperty } from '../types/services/config.service.types';
 import CheckConfig from '../decorators/check.config.decorator';
+import ReplyWithError from '../decorators/reply.with.error.decorator';
+import RepliableError from '../types/globals/repliable.error';
 
 export default class TrashService extends BaseService {
   private static instance: TrashService;
@@ -50,6 +51,7 @@ export default class TrashService extends BaseService {
     return next!();
   }
 
+  @ReplyWithError()
   @DeleteRequestMessage()
   private static async roll(ctx: ContextMessageUpdate): Promise<Message> {
     const username = getUsernameFromContext(ctx);
@@ -65,11 +67,11 @@ export default class TrashService extends BaseService {
       const max = parseInt(parameters[1], 10);
 
       if (!min || !max) {
-        return GlobalHelper.sendError(ctx, 'Wrong format');
+        throw new RepliableError('Wrong format', ctx);
       }
 
       if (!Number.isInteger(min) || !Number.isInteger(max)) {
-        return GlobalHelper.sendError(ctx, 'Wrong data');
+        throw new RepliableError('Wrong data', ctx);
       }
 
       from = min;

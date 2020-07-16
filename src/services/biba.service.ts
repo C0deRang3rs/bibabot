@@ -25,12 +25,13 @@ import {
   MAX_DAILY_BIBACOINT_INCOME,
 } from '../types/services/bibacoin.service.types';
 import { getUsernameFromContext, getBibaTableText } from '../utils/global.util';
-import GlobalHelper from '../utils/global.helper';
 import UpdateBibaTable from '../decorators/update.biba.table.decorator';
 import CheckConfig from '../decorators/check.config.decorator';
 import { ConfigProperty } from '../types/services/config.service.types';
 import { Product } from '../types/services/shop.service.types';
 import * as shopUtils from '../utils/shop.util';
+import ReplyWithError from '../decorators/reply.with.error.decorator';
+import RepliableError from '../types/globals/repliable.error';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -235,6 +236,7 @@ export default class BibaService extends BaseService {
 
   @UpdateBibaTable()
   @DeleteRequestMessage()
+  @ReplyWithError()
   private async sellBiba(ctx: ContextMessageUpdate): Promise<Message> {
     const chatId = ctx.chat!.id;
     const userId = ctx.from!.id;
@@ -242,86 +244,76 @@ export default class BibaService extends BaseService {
     const params = ctx.message!.text!.split(' ');
     const count = parseInt(params[1], 10);
 
-    try {
-      if (!count) throw new Error('Wrong format');
-      if (count <= 0) throw new Error(`${username} ты не можешь продать меньше 1 см`);
+    if (!count) throw new RepliableError('Wrong format', ctx);
+    if (count <= 0) throw new RepliableError(`${username} ты не можешь продать меньше 1 см`, ctx);
 
-      const biba = await this.bibaRepo.getBibaByIds(chatId, userId);
+    const biba = await this.bibaRepo.getBibaByIds(chatId, userId);
 
-      if (!biba) throw new Error(`${username} у тебя нет бибы`);
+    if (!biba) throw new RepliableError(`${username} у тебя нет бибы`, ctx);
 
-      const newSize = biba.size - count;
+    const newSize = biba.size - count;
 
-      if (newSize < 0) throw new Error(`${username} ты не можешь продать больше, чем отрастил`);
+    if (newSize < 0) throw new RepliableError(`${username} ты не можешь продать больше, чем отрастил`, ctx);
 
-      await this.bibaRepo.setBiba(chatId, { ...biba, size: newSize });
-      const cost = count * shopUtils.getPriceByActivity(BibacoinActivity.BIBA_CM);
-      await this.bibacoinService.addCoins(userId, chatId, cost);
+    await this.bibaRepo.setBiba(chatId, { ...biba, size: newSize });
+    const cost = count * shopUtils.getPriceByActivity(BibacoinActivity.BIBA_CM);
+    await this.bibacoinService.addCoins(userId, chatId, cost);
 
-      return ctx.reply(`У ${username} отрезали ${count} см бибы, но взамен он получил ${cost} бибакоинов`);
-    } catch (err) {
-      return GlobalHelper.sendError(ctx, err.message);
-    }
+    return ctx.reply(`У ${username} отрезали ${count} см бибы, но взамен он получил ${cost} бибакоинов`);
   }
 
   @UpdateBibaTable()
+  @ReplyWithError()
   private async removeBiba(ctx: ContextMessageUpdate): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
 
-    try {
-      if (params.length < 1 || params.length > 2) throw new Error('Wrong format');
+    if (params.length < 1 || params.length > 2) throw new RepliableError('Wrong format', ctx);
 
-      const targetUsername = params[1];
+    const targetUsername = params[1];
 
-      if (targetUsername && targetUsername.includes('@')) {
-        const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
+    if (targetUsername && targetUsername.includes('@')) {
+      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
 
-        if (!targetBiba) throw new Error('Wrong user');
+      if (!targetBiba) throw new RepliableError('Wrong user', ctx);
 
-        await this.bibaRepo.removeBiba(chatId, targetBiba.userId);
-      } else if (targetUsername && !targetUsername.includes('@')) {
-        throw new Error('Wrong format');
-      } else {
-        await this.bibaRepo.removeBiba(chatId, ctx.from!.id);
-      }
-
-      return ctx.reply('Done');
-    } catch (err) {
-      return GlobalHelper.sendError(ctx, err.message);
+      await this.bibaRepo.removeBiba(chatId, targetBiba.userId);
+    } else if (targetUsername && !targetUsername.includes('@')) {
+      throw new RepliableError('Wrong format', ctx);
+    } else {
+      await this.bibaRepo.removeBiba(chatId, ctx.from!.id);
     }
+
+    return ctx.reply('Done');
   }
 
   @UpdateBibaTable()
+  @ReplyWithError()
   private async setBiba(ctx: ContextMessageUpdate): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
 
-    try {
-      if (params.length < 2 || params.length > 3) throw new Error('Wrong format');
+    if (params.length < 2 || params.length > 3) throw new RepliableError('Wrong format', ctx);
 
-      const size = parseInt(params[1], 10);
-      const targetUsername = params[2];
+    const size = parseInt(params[1], 10);
+    const targetUsername = params[2];
 
-      if (targetUsername && targetUsername.includes('@')) {
-        const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
+    if (targetUsername && targetUsername.includes('@')) {
+      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
 
-        if (!targetBiba) throw new Error('Wrong user');
+      if (!targetBiba) throw new RepliableError('Wrong user', ctx);
 
-        await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
-      } else if (targetUsername && !targetUsername.includes('@')) {
-        throw new Error('Wrong format');
-      } else {
-        const targetBiba = await this.bibaRepo.getBibaByIds(chatId, ctx.from!.id);
+      await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
+    } else if (targetUsername && !targetUsername.includes('@')) {
+      throw new RepliableError('Wrong format', ctx);
+    } else {
+      const targetBiba = await this.bibaRepo.getBibaByIds(chatId, ctx.from!.id);
 
-        if (!targetBiba) throw new Error('У этого пользователя нет бибы');
+      if (!targetBiba) throw new RepliableError('У этого пользователя нет бибы', ctx);
 
-        await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
-      }
-
-      return ctx.reply('Done');
-    } catch (err) {
-      return GlobalHelper.sendError(ctx, err.message);
+      await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
     }
+
+    return ctx.reply('Done');
   }
 }
