@@ -30,7 +30,7 @@ export default class ChangeTitleService extends BaseService {
     }
   }
 
-  private constructor(
+  constructor(
     private readonly timerRepo: TimerRepository,
   ) {
     super();

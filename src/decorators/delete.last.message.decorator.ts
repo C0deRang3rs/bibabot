@@ -16,9 +16,9 @@ const DeleteLastMessage = (prefix: string) => (_target: object, _propKey: string
 
     if (lastMessage) {
       try {
-        await Bot.getInstance().app.telegram.deleteMessage(message.chat!.id, lastMessage);
+        await Bot.getInstance().app.telegram.deleteMessage(chatId, lastMessage);
       } catch (err) {
-        Bot.handleError(err);
+        Bot.handleError(new Error(`Can't delete last message for chat ${chatId}`));
       }
     }
 

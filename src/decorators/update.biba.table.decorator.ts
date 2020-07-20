@@ -23,7 +23,7 @@ const UpdateBibaTable = () => (_target: object, _propKey: string, desc: Property
           await getBibaTableText(chatId),
         );
       } catch (err) {
-        Bot.handleError(err);
+        Bot.handleError(new Error(`Can't update biba table for chat ${chatId}`));
       }
     }
   };
