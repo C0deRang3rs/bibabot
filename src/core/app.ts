@@ -18,6 +18,7 @@ export default class App {
   private static startPostHandlers(): void {
     Bot.getInstance().applyListeners();
     GlobalService.getInstance().initMessageHandler();
+    process.on('unhandledRejection', (reason) => Bot.handleError(new Error((reason as Error)!.message)));
   }
 
   public start(): void {

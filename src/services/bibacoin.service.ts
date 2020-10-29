@@ -1,4 +1,4 @@
-import { ContextMessageUpdate } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
 import {
   ZERO_BALANCE,
@@ -41,13 +41,13 @@ export default class BibacoinService extends BaseService {
 
   @DeleteRequestMessage()
   @DeleteLastMessage('income')
-  private static async sendIncomeList(ctx: ContextMessageUpdate): Promise<Message> {
+  private static async sendIncomeList(ctx: TelegrafContext): Promise<Message> {
     const list = shopUtils.getActivitiesList();
 
     return ctx.reply(list.map((activity) => `${shopUtils.getActivityContext(activity)}`).join('\n'));
   }
 
-  public async addMessageCoins(ctx: ContextMessageUpdate, next: Function | undefined): Promise<Function> {
+  public async addMessageCoins(ctx: TelegrafContext, next: Function | undefined): Promise<Function> {
     if (!ctx.message) return next!();
 
     const chatId = ctx.chat!.id;
@@ -132,7 +132,7 @@ export default class BibacoinService extends BaseService {
 
   @DeleteRequestMessage()
   @ReplyWithError()
-  private async giveCoins(ctx: ContextMessageUpdate): Promise<Message> {
+  private async giveCoins(ctx: TelegrafContext): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
     const fromUserId = ctx.from!.id;
@@ -164,7 +164,7 @@ export default class BibacoinService extends BaseService {
     return ctx.reply(`${toUser.username} получил ${count} бибакоинов от ${fromUser.username}. Не забудь сказать спасибо`);
   }
 
-  private async setBalance(ctx: ContextMessageUpdate): Promise<Message> {
+  private async setBalance(ctx: TelegrafContext): Promise<Message> {
     const balance = ctx.message!.text!.split(BibacoinDebugCommand.SET_BALANCE)[1].trim();
 
     if (!balance) {
@@ -175,7 +175,7 @@ export default class BibacoinService extends BaseService {
     return ctx.reply('Done');
   }
 
-  private async getBalance(ctx: ContextMessageUpdate): Promise<void> {
+  private async getBalance(ctx: TelegrafContext): Promise<void> {
     const balance = await this.bibacoinRepo.getBibacoinBalanceByIds(ctx.chat!.id, ctx.from!.id);
     const message = balance ? `У тебя на счету ${balance} бибакоинов` : ZERO_BALANCE;
     await ctx.answerCbQuery(message, true);

@@ -1,4 +1,4 @@
-import { ContextMessageUpdate } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
 import { BotEvent } from '../types/core/bot.types';
 import BibacoinService from './bibacoin.service';
@@ -10,6 +10,7 @@ import DeleteResponseMessage from '../decorators/delete.response.message.decorat
 import Bot from '../core/bot';
 import MemeService from './meme.service';
 import TimerRepository from '../repositories/timer.repo';
+import StickerService from './sticker.service';
 
 export default class GlobalService extends BaseService {
   private static instance: GlobalService;
@@ -38,19 +39,20 @@ export default class GlobalService extends BaseService {
       async (ctx, next) => BibacoinService.getInstance().addMessageCoins(ctx, next),
       async (ctx, next) => TrashService.trashHandler(ctx, next),
       async (ctx, next) => MemeService.getInstance().handleMeme(ctx, next),
+      async (ctx, next) => StickerService.getInstance().handleStickerCreation(ctx, next),
     );
   }
 
   protected initListeners(): void {
     this.bot.app.start(
       Bot.logger,
-      (ctx: ContextMessageUpdate) => this.onStart(ctx),
+      (ctx: TelegrafContext) => this.onStart(ctx),
     );
   }
 
   @DeleteRequestMessage()
   @DeleteResponseMessage(10000)
-  private async onStart(ctx: ContextMessageUpdate): Promise<Message> {
+  private async onStart(ctx: TelegrafContext): Promise<Message> {
     const chatId = ctx.chat!.id;
     const chat = await this.chatRepo.getChat(chatId);
     const isTimerActive = await this.timerRepo.getTimerByChatId(chatId);

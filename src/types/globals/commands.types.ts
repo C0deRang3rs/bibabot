@@ -42,3 +42,7 @@ export enum ConfigCommand {
 export enum GlobalCommand {
   START = 'start',
 }
+
+export enum StickerCommand {
+  REMOVE_STICKER = 'remove_sticker',
+}

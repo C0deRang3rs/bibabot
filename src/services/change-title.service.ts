@@ -1,4 +1,4 @@
-import { ContextMessageUpdate } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import Bull from 'bull';
 import { Message } from 'telegraf/typings/telegram-types';
 import GenerateNameUtil from '../utils/generate-name.util';
@@ -66,7 +66,7 @@ export default class ChangeTitleService extends BaseService {
 
   @DeleteRequestMessage()
   @DeleteResponseMessage(5000)
-  public async onIterationChange(ctx: ContextMessageUpdate): Promise<Message> {
+  public async onIterationChange(ctx: TelegrafContext): Promise<Message> {
     const commandData = ctx.message!.text!.split(' ');
 
     switch (commandData[2]) {
@@ -95,7 +95,7 @@ export default class ChangeTitleService extends BaseService {
     return ctx.reply('Iteration interval changed');
   }
 
-  public async onRename(ctx: ContextMessageUpdate): Promise<void> {
+  public async onRename(ctx: TelegrafContext): Promise<void> {
     if (!ctx.chat) return;
 
     await this.changeTitle(ctx.chat.id, false);

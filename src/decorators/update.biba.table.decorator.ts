@@ -1,4 +1,4 @@
-import { ContextMessageUpdate } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import Bot from '../core/bot';
 import LastMessageRepository from '../repositories/last.message.repo';
 import { getBibaTableText } from '../utils/global.util';
@@ -9,7 +9,7 @@ const UpdateBibaTable = () => (_target: object, _propKey: string, desc: Property
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
-  desc.value = async function wrapped(...args: ContextMessageUpdate[]): Promise<void> {
+  desc.value = async function wrapped(...args: TelegrafContext[]): Promise<void> {
     await method.apply(this, args);
     const chatId = args[0].chat!.id;
     const lastMessage = await lastMessageRepo.getLastMessage('biba_table', chatId);

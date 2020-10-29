@@ -1,4 +1,5 @@
-import { ContextMessageUpdate, Markup } from 'telegraf';
+import { Markup } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
 import { BotCommandType } from '../types/core/bot.types';
 import {
@@ -43,7 +44,7 @@ export default class ShopService extends BaseService {
 
   @DeleteRequestMessage()
   @DeleteLastMessage('shop')
-  private static async sendProductsList(ctx: ContextMessageUpdate): Promise<Message> {
+  private static async sendProductsList(ctx: TelegrafContext): Promise<Message> {
     const list = shopUtils.getProductsList();
 
     return ctx.reply(
@@ -78,7 +79,7 @@ export default class ShopService extends BaseService {
     ]);
   }
 
-  private async buyReroll(ctx: ContextMessageUpdate): Promise<void> {
+  private async buyReroll(ctx: TelegrafContext): Promise<void> {
     try {
       const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
       const chatId = ctx.chat!.id;
@@ -108,7 +109,7 @@ export default class ShopService extends BaseService {
   }
 
   @UpdateBibaTable()
-  private async buyOneCM(ctx: ContextMessageUpdate): Promise<void> {
+  private async buyOneCM(ctx: TelegrafContext): Promise<void> {
     try {
       const price = shopUtils.getProductPrice(Product.BIBA_CM);
       const chatId = ctx.chat!.id;
