@@ -1,4 +1,4 @@
-import { ContextMessageUpdate } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
 import Bot from '../core/bot';
 import LastMessageRepository from '../repositories/last.message.repo';
@@ -9,7 +9,7 @@ const DeleteLastMessage = (prefix: string) => (_target: object, _propKey: string
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
-  desc.value = async function wrapped(...args: ContextMessageUpdate[]): Promise<void> {
+  desc.value = async function wrapped(...args: TelegrafContext[]): Promise<void> {
     const message: Message = await method.apply(this, args);
     const chatId = message.chat!.id;
     const lastMessage = await lastMessageRepo.getLastMessage(prefix, chatId);

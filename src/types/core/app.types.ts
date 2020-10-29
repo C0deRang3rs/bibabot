@@ -6,6 +6,7 @@ import ShopService from '../../services/shop.service';
 import GlobalService from '../../services/global.service';
 import MemeService from '../../services/meme.service';
 import ConfigService from '../../services/config.service';
+import StickerService from '../../services/sticker.service';
 
 export type AppServices =
   typeof ChangeTitleService |
@@ -15,4 +16,5 @@ export type AppServices =
   typeof ShopService |
   typeof GlobalService |
   typeof MemeService |
+  typeof StickerService |
   typeof ConfigService;

@@ -1,6 +1,7 @@
-import Telegraf, { ContextMessageUpdate } from 'telegraf';
+import Telegraf from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import { MessageSubTypes } from 'telegraf/typings/telegram-types';
-import { TelegrafFull, BotListener, BotEvent } from '../types/core/bot.types';
+import { BotListener, BotEvent, TelegrafFull } from '../types/core/bot.types';
 import { getUsernameFromContext } from '../utils/global.util';
 
 export default class Bot {
@@ -26,7 +27,7 @@ export default class Bot {
     console.error(err);
   }
 
-  public static logger(ctx: ContextMessageUpdate, next?: Function, commandName?: string): Function {
+  public static logger(ctx: TelegrafContext, next?: Function, commandName?: string): void {
     const chat = ctx.chat!;
 
     const username = getUsernameFromContext(ctx);
@@ -36,7 +37,7 @@ export default class Bot {
       console.log(`[${chat.id}] ${chat.title || 'Personal message'} from user ${username} - ${message}`);
     }
 
-    return next!();
+    next!();
   }
 
   public addListeners(list: Array<BotListener>): void {
@@ -52,7 +53,7 @@ export default class Bot {
   }
 
   private initMain(): void {
-    this.app = new Telegraf(process.env.BOT_TOKEN as string) as TelegrafFull;
+    this.app = new Telegraf(process.env.BOT_TOKEN as string) as unknown as TelegrafFull;
   }
 
   private async startPooling(): Promise<void> {
@@ -61,6 +62,6 @@ export default class Bot {
   }
 
   private initHandlers(): void {
-    this.app.catch((err: Error) => Bot.handleError(err));
+    this.app.catch(Bot.handleError);
   }
 }

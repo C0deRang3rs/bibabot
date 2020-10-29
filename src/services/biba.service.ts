@@ -1,6 +1,6 @@
 import Bull from 'bull';
-import { ContextMessageUpdate, Markup } from 'telegraf';
-
+import { Markup } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
 import { BibaCommand, BibaDebugCommand } from '../types/globals/commands.types';
 import {
@@ -57,7 +57,7 @@ export default class BibaService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  private static async unrankedBibaMetr(ctx: ContextMessageUpdate): Promise<Message> {
+  private static async unrankedBibaMetr(ctx: TelegrafContext): Promise<Message> {
     const username = getUsernameFromContext(ctx);
     return ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
   }
@@ -87,7 +87,7 @@ export default class BibaService extends BaseService {
   }
 
   @DeleteResponseMessage(10000)
-  private static async sendRerollBlockedMessage(ctx: ContextMessageUpdate, username: string): Promise<Message> {
+  private static async sendRerollBlockedMessage(ctx: TelegrafContext, username: string): Promise<Message> {
     const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
 
     return ctx.reply(
@@ -110,13 +110,13 @@ export default class BibaService extends BaseService {
 
   @DeleteRequestMessage()
   @DeleteLastMessage('biba_table')
-  private static async bibaTable(ctx: ContextMessageUpdate): Promise<Message> {
+  private static async bibaTable(ctx: TelegrafContext): Promise<Message> {
     return ctx.reply(await getBibaTableText(ctx.chat!.id));
   }
 
   @UpdateBibaTable()
   @DeleteRequestMessage()
-  public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<Message> {
+  public async bibaMetr(ctx: TelegrafContext, forceReroll?: boolean): Promise<Message> {
     const user = (ctx.message && ctx.message!.from!) || ctx.from!;
     const username = getUsernameFromContext(ctx);
     const userId = user.id;
@@ -237,7 +237,7 @@ export default class BibaService extends BaseService {
   @UpdateBibaTable()
   @DeleteRequestMessage()
   @ReplyWithError()
-  private async sellBiba(ctx: ContextMessageUpdate): Promise<Message> {
+  private async sellBiba(ctx: TelegrafContext): Promise<Message> {
     const chatId = ctx.chat!.id;
     const userId = ctx.from!.id;
     const username = getUsernameFromContext(ctx);
@@ -264,7 +264,7 @@ export default class BibaService extends BaseService {
 
   @UpdateBibaTable()
   @ReplyWithError()
-  private async removeBiba(ctx: ContextMessageUpdate): Promise<Message> {
+  private async removeBiba(ctx: TelegrafContext): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
 
@@ -289,7 +289,7 @@ export default class BibaService extends BaseService {
 
   @UpdateBibaTable()
   @ReplyWithError()
-  private async setBiba(ctx: ContextMessageUpdate): Promise<Message> {
+  private async setBiba(ctx: TelegrafContext): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
     const chatId = ctx.chat!.id;
 

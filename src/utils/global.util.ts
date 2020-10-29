@@ -1,8 +1,8 @@
-import { ContextMessageUpdate } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import BibaRepository from '../repositories/biba.repo';
 import { NO_TABLE_DATA } from '../types/services/biba.service.types';
 
-export const getUsernameFromContext = (ctx: ContextMessageUpdate): string => {
+export const getUsernameFromContext = (ctx: TelegrafContext): string => {
   const user = (ctx.message && ctx.message!.from!) || ctx.from!;
   return user.username
     ? `@${user.username}` : `${user.first_name}${user.last_name

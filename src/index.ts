@@ -7,6 +7,7 @@ import GlobalService from './services/global.service';
 import MemeService from './services/meme.service';
 import ConfigService from './services/config.service';
 import App from './core/app';
+import StickerService from './services/sticker.service';
 
 const app = new App([
   ChangeTitleService,
@@ -17,6 +18,7 @@ const app = new App([
   GlobalService,
   MemeService,
   ConfigService,
+  StickerService,
 ]);
 
 app.start();
