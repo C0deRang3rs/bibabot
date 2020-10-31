@@ -81,26 +81,6 @@ export default class TrashService extends BaseService {
     return ctx.reply(`${username} рандомит ${Math.floor(Math.random() * (to - from + 1) + from)}`);
   }
 
-  protected initListeners(): void {
-    this.bot.addListeners([
-      {
-        type: BotCommandType.COMMAND,
-        name: TrashCommand.FLIP,
-        callback: (ctx): Promise<Message> => this.coinFlip(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
-        name: TrashCommand.ROLL,
-        callback: (ctx): Promise<Message> => TrashService.roll(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
-        name: TrashCommand.FLIP_STAT,
-        callback: (ctx): Promise<Message> => this.coinFlipStat(ctx),
-      },
-    ]);
-  }
-
   @DeleteRequestMessage()
   private async coinFlip(ctx: TelegrafContext): Promise<Message> {
     const username = getUsernameFromContext(ctx);
@@ -123,5 +103,25 @@ export default class TrashService extends BaseService {
       `Tails - ${tailsStat || 0}% - ${tailsCount} раз\n`
     + `Heads - ${headsStat || 0}% - ${headsCount} раз`,
     );
+  }
+
+  protected initListeners(): void {
+    this.bot.addListeners([
+      {
+        type: BotCommandType.COMMAND,
+        name: TrashCommand.FLIP,
+        callback: (ctx): Promise<Message> => this.coinFlip(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: TrashCommand.ROLL,
+        callback: (ctx): Promise<Message> => TrashService.roll(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: TrashCommand.FLIP_STAT,
+        callback: (ctx): Promise<Message> => this.coinFlipStat(ctx),
+      },
+    ]);
   }
 }

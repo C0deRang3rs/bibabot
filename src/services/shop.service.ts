@@ -59,6 +59,36 @@ export default class ShopService extends BaseService {
     );
   }
 
+  @UpdateBibaTable()
+  private async buyOneCM(ctx: TelegrafContext): Promise<void> {
+    try {
+      const price = shopUtils.getProductPrice(Product.BIBA_CM);
+      const chatId = ctx.chat!.id;
+      const userId = ctx.from!.id;
+      await this.bibacoinService.hasEnoughCredits(userId, chatId, price);
+
+      const currentBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
+      if (!currentBiba) {
+        await ctx.answerCbQuery(NO_BIBA_TO_BUY);
+        return;
+      }
+
+      if (currentBiba.outdated) {
+        await ctx.answerCbQuery('Биба уже пованивает, обнови её с помощью /biba');
+        return;
+      }
+
+      await this.bibaRepo.setBiba(chatId, { ...currentBiba, size: currentBiba.size + 1 });
+
+      await this.bibacoinService.withdrawCoins(userId, chatId, price);
+      await ctx.answerCbQuery(`Теперь твоя биба ${currentBiba.size + 1} см`);
+    } catch (e) {
+      await ctx.answerCbQuery(e.message, true);
+      throw e;
+    }
+  }
+
   protected initListeners(): void {
     this.bot.addListeners([
       {
@@ -102,36 +132,6 @@ export default class ShopService extends BaseService {
 
       await this.bibacoinService.withdrawCoins(userId, chatId, price);
       await ctx.answerCbQuery('Реролл куплен!');
-    } catch (e) {
-      await ctx.answerCbQuery(e.message, true);
-      throw e;
-    }
-  }
-
-  @UpdateBibaTable()
-  private async buyOneCM(ctx: TelegrafContext): Promise<void> {
-    try {
-      const price = shopUtils.getProductPrice(Product.BIBA_CM);
-      const chatId = ctx.chat!.id;
-      const userId = ctx.from!.id;
-      await this.bibacoinService.hasEnoughCredits(userId, chatId, price);
-
-      const currentBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
-
-      if (!currentBiba) {
-        await ctx.answerCbQuery(NO_BIBA_TO_BUY);
-        return;
-      }
-
-      if (currentBiba.outdated) {
-        await ctx.answerCbQuery('Биба уже пованивает, обнови её с помощью /biba');
-        return;
-      }
-
-      await this.bibaRepo.setBiba(chatId, { ...currentBiba, size: currentBiba.size + 1 });
-
-      await this.bibacoinService.withdrawCoins(userId, chatId, price);
-      await ctx.answerCbQuery(`Теперь твоя биба ${currentBiba.size + 1} см`);
     } catch (e) {
       await ctx.answerCbQuery(e.message, true);
       throw e;

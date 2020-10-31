@@ -6,7 +6,9 @@ import { getUsernameFromContext } from '../utils/global.util';
 
 export default class Bot {
   private static instance: Bot;
+
   public app!: TelegrafFull;
+
   private listeners: Array<BotListener> = [];
 
   private constructor() {

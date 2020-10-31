@@ -33,6 +33,22 @@ export default class GlobalService extends BaseService {
     return GlobalService.instance;
   }
 
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(10000)
+  private async onStart(ctx: TelegrafContext): Promise<Message> {
+    const chatId = ctx.chat!.id;
+    const chat = await this.chatRepo.getChat(chatId);
+    const isTimerActive = await this.timerRepo.getTimerByChatId(chatId);
+
+    if (chat || isTimerActive) {
+      return ctx.reply('Этот чат уже активирован');
+    }
+
+    await this.timerRepo.setTimerByChatId(chatId, new Date());
+    await this.chatRepo.addChat(ctx.chat!.id);
+    return ctx.reply('Вечер в хату');
+  }
+
   public initMessageHandler(): void {
     this.bot.app.on(
       BotEvent.MESSAGE,
@@ -48,21 +64,5 @@ export default class GlobalService extends BaseService {
       Bot.logger,
       (ctx: TelegrafContext) => this.onStart(ctx),
     );
-  }
-
-  @DeleteRequestMessage()
-  @DeleteResponseMessage(10000)
-  private async onStart(ctx: TelegrafContext): Promise<Message> {
-    const chatId = ctx.chat!.id;
-    const chat = await this.chatRepo.getChat(chatId);
-    const isTimerActive = await this.timerRepo.getTimerByChatId(chatId);
-
-    if (chat || isTimerActive) {
-      return ctx.reply('Этот чат уже активирован');
-    }
-
-    await this.timerRepo.setTimerByChatId(chatId, new Date());
-    await this.chatRepo.addChat(ctx.chat!.id);
-    return ctx.reply('Вечер в хату');
   }
 }

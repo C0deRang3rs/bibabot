@@ -46,7 +46,7 @@ export default class StickerService extends BaseService {
     });
     const htmlString = htmlTemplateResponse.data;
 
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(htmlString);
     await page.evaluate(() => { document.body.style.background = 'transparent'; });
@@ -113,16 +113,6 @@ export default class StickerService extends BaseService {
     next!();
   }
 
-  protected initListeners(): void {
-    this.bot.addListeners([
-      {
-        type: BotCommandType.COMMAND,
-        name: StickerCommand.REMOVE_STICKER,
-        callback: (ctx): Promise<Message> => this.removeStickerFromPack(ctx),
-      },
-    ]);
-  }
-
   @ReplyWithError()
   @DeleteRequestMessage()
   @OnlyReply()
@@ -143,5 +133,15 @@ export default class StickerService extends BaseService {
     await this.bot.app.telegram.deleteMessage(ctx.chat!.id, reply.message_id);
 
     return ctx.reply('Стикер удалён');
+  }
+
+  protected initListeners(): void {
+    this.bot.addListeners([
+      {
+        type: BotCommandType.COMMAND,
+        name: StickerCommand.REMOVE_STICKER,
+        callback: (ctx): Promise<Message> => this.removeStickerFromPack(ctx),
+      },
+    ]);
   }
 }

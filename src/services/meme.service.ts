@@ -56,21 +56,6 @@ export default class MemeService extends BaseService {
     return next!();
   }
 
-  protected initListeners(): void {
-    this.bot.addListeners([
-      {
-        type: BotCommandType.ACTION,
-        name: MemeAction.LIKE,
-        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.LIKE),
-      },
-      {
-        type: BotCommandType.ACTION,
-        name: MemeAction.DISLIKE,
-        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.DISLIKE),
-      },
-    ]);
-  }
-
   @CheckConfig(ConfigProperty.MEME_STAT)
   private async changeMemeStat(ctx: TelegrafContext, actionType: MemeAction): Promise<void> {
     const { message } = ctx.update.callback_query!;
@@ -115,6 +100,21 @@ export default class MemeService extends BaseService {
 
     await this.updateStatMessage(chatId, messageId);
     await ctx.answerCbQuery(response.message);
+  }
+
+  protected initListeners(): void {
+    this.bot.addListeners([
+      {
+        type: BotCommandType.ACTION,
+        name: MemeAction.LIKE,
+        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.LIKE),
+      },
+      {
+        type: BotCommandType.ACTION,
+        name: MemeAction.DISLIKE,
+        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.DISLIKE),
+      },
+    ]);
   }
 
   private async updateStatMessage(chatId: number, messageId: number): Promise<void> {

@@ -28,6 +28,15 @@ export default class ConfigService extends BaseService {
     return ConfigService.instance;
   }
 
+  @DeleteRequestMessage()
+  @DeleteLastMessage('config')
+  private async configMenu(ctx: TelegrafContext): Promise<Message> {
+    return ctx.reply(
+      'Опции бота для данного чата:',
+      (await this.getMenuMarkup(ctx.chat!.id)).extra(),
+    );
+  }
+
   public async checkProperty(chatId: number, property: ConfigProperty): Promise<boolean> {
     const config = await this.configRepo.getConfigByChatId(chatId);
 
@@ -69,15 +78,6 @@ export default class ConfigService extends BaseService {
 
     await this.configRepo.setConfigByChatId(chatId, config);
     await this.updateMenu(chatId, message!.message_id);
-  }
-
-  @DeleteRequestMessage()
-  @DeleteLastMessage('config')
-  private async configMenu(ctx: TelegrafContext): Promise<Message> {
-    return ctx.reply(
-      'Опции бота для данного чата:',
-      (await this.getMenuMarkup(ctx.chat!.id)).extra(),
-    );
   }
 
   private async getMenuMarkup(chatId: number): Promise<Markup & InlineKeyboardMarkup> {

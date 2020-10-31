@@ -56,10 +56,11 @@ export default class BibaService extends BaseService {
     return BibaService.instance;
   }
 
-  @DeleteRequestMessage()
-  private static async unrankedBibaMetr(ctx: TelegrafContext): Promise<Message> {
-    const username = getUsernameFromContext(ctx);
-    return ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
+  private static getNewBibaMessage(oldSize: number, newSize: number): string {
+    const diff = oldSize - newSize;
+
+    if (diff === 0) return SAME_BIBA;
+    return oldSize - newSize > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA;
   }
 
   private static getDailyMessage(allBibas: Array<Biba>): string {
@@ -84,34 +85,6 @@ export default class BibaService extends BaseService {
     return `${message}\n\n`
          + `Также все участники чата получили свой дневной прирост бибакоинов в ${DAILY_BIBACOINT_INCOME_PERCENT}%. `
          + `Но не больше ${MAX_DAILY_BIBACOINT_INCOME}`;
-  }
-
-  @DeleteResponseMessage(10000)
-  private static async sendRerollBlockedMessage(ctx: TelegrafContext, username: string): Promise<Message> {
-    const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
-
-    return ctx.reply(
-      `${username} сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
-      Markup.inlineKeyboard(
-        [Markup.callbackButton(
-          `Перемерять бибу 💰${price}¢`,
-          shopUtils.getActionByProduct(Product.BIBA_REROLL),
-        )],
-      ).extra(),
-    );
-  }
-
-  private static getNewBibaMessage(oldSize: number, newSize: number): string {
-    const diff = oldSize - newSize;
-
-    if (diff === 0) return SAME_BIBA;
-    return oldSize - newSize > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA;
-  }
-
-  @DeleteRequestMessage()
-  @DeleteLastMessage('biba_table')
-  private static async bibaTable(ctx: TelegrafContext): Promise<Message> {
-    return ctx.reply(await getBibaTableText(ctx.chat!.id));
   }
 
   @UpdateBibaTable()
@@ -155,65 +128,25 @@ export default class BibaService extends BaseService {
     return ctx.reply(bibaMessage);
   }
 
-  public async dailyBiba(done?: Bull.DoneCallback, forcedChatId?: number): Promise<void> {
-    try {
-      const chatIds = forcedChatId ? [forcedChatId] : await this.chatRepo.getAllChats();
-
-      await Promise.all(chatIds.map(async (chatId) => this.triggerDailyBibaForChat(chatId)));
-    } catch (err) {
-      Bot.handleError(err);
-    }
-
-    if (done) {
-      done();
-    }
+  @DeleteRequestMessage()
+  private static async unrankedBibaMetr(ctx: TelegrafContext): Promise<Message> {
+    const username = getUsernameFromContext(ctx);
+    return ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
   }
 
-  protected initListeners(): void {
-    const commands: Array<BotListener> = [
-      {
-        type: BotCommandType.COMMAND,
-        name: BibaCommand.BIBA,
-        callback: (ctx): Promise<Message> => this.bibaMetr(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
-        name: BibaCommand.UNRANKED_BIBA,
-        callback: (ctx): Promise<Message> => BibaService.unrankedBibaMetr(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
-        name: BibaCommand.BIBA_TABLE,
-        callback: (ctx): Promise<Message> => BibaService.bibaTable(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
-        name: BibaCommand.SELL_BIBA,
-        callback: (ctx): Promise<Message> => this.sellBiba(ctx),
-      },
-    ];
+  @DeleteResponseMessage(10000)
+  private static async sendRerollBlockedMessage(ctx: TelegrafContext, username: string): Promise<Message> {
+    const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
 
-    if (process.env.PRODUCTION === 'false') {
-      commands.push(
-        {
-          type: BotCommandType.COMMAND,
-          name: BibaDebugCommand.SET_BIBA,
-          callback: (ctx) => this.setBiba(ctx),
-        },
-        {
-          type: BotCommandType.COMMAND,
-          name: BibaDebugCommand.REMOVE_BIBA,
-          callback: (ctx) => this.removeBiba(ctx),
-        },
-        {
-          type: BotCommandType.COMMAND,
-          name: BibaDebugCommand.TRIGGER_DAILY,
-          callback: (ctx) => this.dailyBiba(undefined, ctx.chat!.id),
-        },
-      );
-    }
-
-    this.bot.addListeners(commands);
+    return ctx.reply(
+      `${username} сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
+      Markup.inlineKeyboard(
+        [Markup.callbackButton(
+          `Перемерять бибу 💰${price}¢`,
+          shopUtils.getActionByProduct(Product.BIBA_REROLL),
+        )],
+      ).extra(),
+    );
   }
 
   @CheckConfig(ConfigProperty.DAILY)
@@ -232,6 +165,12 @@ export default class BibaService extends BaseService {
     await this.bot.app.telegram.sendMessage(chatId, message);
 
     await this.bibaRepo.setAllBibasOutdated(chatId);
+  }
+
+  @DeleteRequestMessage()
+  @DeleteLastMessage('biba_table')
+  private static async bibaTable(ctx: TelegrafContext): Promise<Message> {
+    return ctx.reply(await getBibaTableText(ctx.chat!.id));
   }
 
   @UpdateBibaTable()
@@ -315,5 +254,66 @@ export default class BibaService extends BaseService {
     }
 
     return ctx.reply('Done');
+  }
+
+  public async dailyBiba(done?: Bull.DoneCallback, forcedChatId?: number): Promise<void> {
+    try {
+      const chatIds = forcedChatId ? [forcedChatId] : await this.chatRepo.getAllChats();
+
+      await Promise.all(chatIds.map(async (chatId) => this.triggerDailyBibaForChat(chatId)));
+    } catch (err) {
+      Bot.handleError(err);
+    }
+
+    if (done) {
+      done();
+    }
+  }
+
+  protected initListeners(): void {
+    const commands: Array<BotListener> = [
+      {
+        type: BotCommandType.COMMAND,
+        name: BibaCommand.BIBA,
+        callback: (ctx): Promise<Message> => this.bibaMetr(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: BibaCommand.UNRANKED_BIBA,
+        callback: (ctx): Promise<Message> => BibaService.unrankedBibaMetr(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: BibaCommand.BIBA_TABLE,
+        callback: (ctx): Promise<Message> => BibaService.bibaTable(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: BibaCommand.SELL_BIBA,
+        callback: (ctx): Promise<Message> => this.sellBiba(ctx),
+      },
+    ];
+
+    if (process.env.PRODUCTION === 'false') {
+      commands.push(
+        {
+          type: BotCommandType.COMMAND,
+          name: BibaDebugCommand.SET_BIBA,
+          callback: (ctx) => this.setBiba(ctx),
+        },
+        {
+          type: BotCommandType.COMMAND,
+          name: BibaDebugCommand.REMOVE_BIBA,
+          callback: (ctx) => this.removeBiba(ctx),
+        },
+        {
+          type: BotCommandType.COMMAND,
+          name: BibaDebugCommand.TRIGGER_DAILY,
+          callback: (ctx) => this.dailyBiba(undefined, ctx.chat!.id),
+        },
+      );
+    }
+
+    this.bot.addListeners(commands);
   }
 }

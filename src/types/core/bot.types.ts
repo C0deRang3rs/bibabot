@@ -3,13 +3,13 @@ import Telegraf, { Telegram } from 'telegraf';
 import { TelegrafContext } from 'telegraf/typings/context';
 
 export enum BotEvent {
-  MESSAGE = 'message'
+  MESSAGE = 'message',
 }
 
 export enum BotCommandType {
   ON = 'on',
   COMMAND = 'command',
-  ACTION = 'action'
+  ACTION = 'action',
 }
 
 export interface BotListener {
