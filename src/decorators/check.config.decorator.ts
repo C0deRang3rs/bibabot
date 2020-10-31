@@ -22,9 +22,9 @@ const CheckConfig = (property: ConfigProperty) => (_target: object, _propKey: st
     const isAllowed = await ConfigService.getInstance().checkProperty(chatId!, property);
 
     if (!isAllowed) {
-      if (typeof secondArgument !== 'boolean' || (typeof secondArgument !== 'boolean' && secondArgument)) {
+      if (typeof secondArgument !== 'boolean' || (typeof secondArgument === 'boolean' && secondArgument)) {
         if (typeof args[1] === 'function') {
-          args[1]!();
+          args[1]();
         }
 
         return;
