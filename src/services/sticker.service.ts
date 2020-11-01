@@ -66,6 +66,12 @@ export default class StickerService extends BaseService {
   public async handleStickerCreation(ctx: TelegrafContext, next: Function | undefined): Promise<void> {
     const reply = ctx.message!.reply_to_message!;
     const text = reply.text!;
+
+    if (!text) {
+      next!();
+      return;
+    }
+
     const messageAuthor = reply.from!;
     const chatId = ctx!.chat!.id;
     const setName = `set_${chatId.toString().replace('-', '1')}_by_${this.bot.app.options.username}`;
