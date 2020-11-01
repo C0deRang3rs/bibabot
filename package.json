@@ -19,7 +19,9 @@
     "build:docker": "docker-compose build",
     "lint": "./node_modules/.bin/eslint --ext .ts ./",
     "test": "./node_modules/.bin/jest --silent",
-    "predeploy": "npm run lint && npm run test"
+    "predeploy": "npm run lint && npm run test",
+    "release:dev": "heroku container:push bot -a bibabot-dev && heroku container:release bot -a bibabot-dev",
+    "release:prod": "heroku container:push bot -a bibabot-prod && heroku container:release bot -a bibabot-prod"
   },
   "author": "",
   "license": "ISC",
