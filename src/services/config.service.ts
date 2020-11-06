@@ -1,4 +1,5 @@
-import { ContextMessageUpdate, Markup } from 'telegraf';
+import { Markup } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import { Message, InlineKeyboardMarkup } from 'telegraf/typings/telegram-types';
 import BaseService from './base.service';
 import { BotCommandType, BotListener } from '../types/core/bot.types';
@@ -25,6 +26,15 @@ export default class ConfigService extends BaseService {
     }
 
     return ConfigService.instance;
+  }
+
+  @DeleteRequestMessage()
+  @DeleteLastMessage('config')
+  private async configMenu(ctx: TelegrafContext): Promise<Message> {
+    return ctx.reply(
+      'Опции бота для данного чата:',
+      (await this.getMenuMarkup(ctx.chat!.id)).extra(),
+    );
   }
 
   public async checkProperty(chatId: number, property: ConfigProperty): Promise<boolean> {
@@ -59,7 +69,7 @@ export default class ConfigService extends BaseService {
     this.bot.addListeners(listeners);
   }
 
-  private async switchProperty(ctx: ContextMessageUpdate, property: ConfigProperty, value: boolean): Promise<void> {
+  private async switchProperty(ctx: TelegrafContext, property: ConfigProperty, value: boolean): Promise<void> {
     const chatId = ctx.chat!.id;
     const { message } = ctx.update.callback_query!;
 
@@ -68,15 +78,6 @@ export default class ConfigService extends BaseService {
 
     await this.configRepo.setConfigByChatId(chatId, config);
     await this.updateMenu(chatId, message!.message_id);
-  }
-
-  @DeleteRequestMessage()
-  @DeleteLastMessage('config')
-  private async configMenu(ctx: ContextMessageUpdate): Promise<Message> {
-    return ctx.reply(
-      'Опции бота для данного чата:',
-      (await this.getMenuMarkup(ctx.chat!.id)).extra(),
-    );
   }
 
   private async getMenuMarkup(chatId: number): Promise<Markup & InlineKeyboardMarkup> {

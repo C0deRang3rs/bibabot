@@ -1,1 +1,0 @@
-web: npm i -g typescript && tsc && npm start

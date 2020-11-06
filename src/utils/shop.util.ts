@@ -31,11 +31,11 @@ export const getPriceByMessage = (message: IncomingMessage): number => getPriceB
 export const getActivityContext = (activity: BibacoinActivity): string => {
   const context = ActivityContext[activity] || 'Пока нет описания этой активности';
 
-  return `${context} - 💰${getPriceByActivity(activity)}¢`;
+  return `${context} - ${getPriceByActivity(activity)}💰`;
 };
 
 export const getProductActionContext = (product: Product): string => {
   const context = ProductActionContext[product] || 'Пока нет описания этой этого продукта';
 
-  return `${context} 💰${getProductPrice(product)}¢`;
+  return `${context} ${getProductPrice(product)}💰`;
 };

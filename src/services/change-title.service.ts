@@ -1,4 +1,4 @@
-import { ContextMessageUpdate } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import Bull from 'bull';
 import { Message } from 'telegraf/typings/telegram-types';
 import GenerateNameUtil from '../utils/generate-name.util';
@@ -15,7 +15,9 @@ import { TimerUnit, TimerUnitName } from '../types/services/change-title.service
 
 export default class ChangeTitleService extends BaseService {
   protected static instance: ChangeTitleService;
+
   private iterationUnits = TimerUnit.HOURS;
+
   private iterationTime = 12;
 
   get unitsName(): string {
@@ -30,7 +32,7 @@ export default class ChangeTitleService extends BaseService {
     }
   }
 
-  private constructor(
+  constructor(
     private readonly timerRepo: TimerRepository,
   ) {
     super();
@@ -46,27 +48,9 @@ export default class ChangeTitleService extends BaseService {
     return ChangeTitleService.instance;
   }
 
-  public async resolveRenames(done: Bull.DoneCallback): Promise<void> {
-    const objectedTimers = await this.timerRepo.getAllTimers();
-
-    await Promise.all(Object.keys(objectedTimers).map(async (id: string) => {
-      if (this.isRenameNeeded(objectedTimers[id])) {
-        try {
-          await this.changeTitle(parseInt(id, 10), true);
-        } catch (err) {
-          Bot.handleError(err);
-        }
-
-        await this.timerRepo.setTimerByChatId(id, new Date());
-      }
-    }));
-
-    done();
-  }
-
   @DeleteRequestMessage()
   @DeleteResponseMessage(5000)
-  public async onIterationChange(ctx: ContextMessageUpdate): Promise<Message> {
+  public async onIterationChange(ctx: TelegrafContext): Promise<Message> {
     const commandData = ctx.message!.text!.split(' ');
 
     switch (commandData[2]) {
@@ -95,7 +79,32 @@ export default class ChangeTitleService extends BaseService {
     return ctx.reply('Iteration interval changed');
   }
 
-  public async onRename(ctx: ContextMessageUpdate): Promise<void> {
+  @CheckConfig(ConfigProperty.RENAME)
+  private async changeTitle(id: number, auto: boolean): Promise<void> {
+    const newName = await GenerateNameUtil.generateName();
+    console.log(`[${id}]${auto ? ' Auto-rename.' : ''} New name: ${newName}`);
+    await this.bot.app.telegram.setChatTitle(id, newName);
+  }
+
+  public async resolveRenames(done: Bull.DoneCallback): Promise<void> {
+    const objectedTimers = await this.timerRepo.getAllTimers();
+
+    await Promise.all(Object.keys(objectedTimers).map(async (id: string) => {
+      if (this.isRenameNeeded(objectedTimers[id])) {
+        try {
+          await this.changeTitle(parseInt(id, 10), true);
+        } catch (err) {
+          Bot.handleError(err);
+        }
+
+        await this.timerRepo.setTimerByChatId(id, new Date());
+      }
+    }));
+
+    done();
+  }
+
+  public async onRename(ctx: TelegrafContext): Promise<void> {
     if (!ctx.chat) return;
 
     await this.changeTitle(ctx.chat.id, false);
@@ -114,13 +123,6 @@ export default class ChangeTitleService extends BaseService {
         callback: (ctx): Promise<Message> => this.onIterationChange(ctx),
       },
     ]);
-  }
-
-  @CheckConfig(ConfigProperty.RENAME)
-  private async changeTitle(id: number, auto: boolean): Promise<void> {
-    const newName = await GenerateNameUtil.generateName();
-    console.log(`[${id}]${auto ? ' Auto-rename.' : ''} New name: ${newName}`);
-    await this.bot.app.telegram.setChatTitle(id, newName);
   }
 
   private isRenameNeeded(timer: string): boolean {
