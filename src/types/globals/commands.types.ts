@@ -36,9 +36,13 @@ export enum ShopCommand {
 }
 
 export enum ConfigCommand {
-  CONFIG = 'config'
+  CONFIG = 'config',
 }
 
 export enum GlobalCommand {
   START = 'start',
+}
+
+export enum StickerCommand {
+  REMOVE_STICKER = 'remove_sticker',
 }

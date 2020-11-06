@@ -1,5 +1,5 @@
-import { ContextMessageUpdate, Markup } from 'telegraf';
-import { Message } from 'telegraf/typings/telegram-types';
+import { Markup } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import BaseService from './base.service';
 import { BotCommandType } from '../types/core/bot.types';
 import MemeRepository from '../repositories/meme.repo';
@@ -14,6 +14,8 @@ import * as shopUtils from '../utils/shop.util';
 
 export default class MemeService extends BaseService {
   private static instance: MemeService;
+
+  private reliedMediaIds = new Set();
 
   private constructor(
     private readonly memeRepo: MemeRepository,
@@ -35,9 +37,18 @@ export default class MemeService extends BaseService {
 
   @CheckMessageContent(MessageContent.PHOTO)
   @CheckConfig(ConfigProperty.MEME_STAT)
-  public async handleMeme(ctx: ContextMessageUpdate, next: Function | undefined): Promise<Message> {
+  public async handleMeme(ctx: TelegrafContext, next: Function | undefined): Promise<void> {
     const chatId = ctx.chat!.id;
     const messageId = ctx.message!.message_id;
+    const mediaId = ctx.message!.media_group_id!;
+    const isReplied = this.reliedMediaIds.has(mediaId);
+
+    if (isReplied) {
+      next!();
+      return;
+    }
+
+    this.reliedMediaIds.add(mediaId);
 
     const responseMessage = await ctx.reply(
       'Оцените данный мем',
@@ -52,26 +63,11 @@ export default class MemeService extends BaseService {
 
     await this.memeRepo.initStat(chatId, responseMessage.message_id, ctx.from!.id);
 
-    return next!();
-  }
-
-  protected initListeners(): void {
-    this.bot.addListeners([
-      {
-        type: BotCommandType.ACTION,
-        name: MemeAction.LIKE,
-        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.LIKE),
-      },
-      {
-        type: BotCommandType.ACTION,
-        name: MemeAction.DISLIKE,
-        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.DISLIKE),
-      },
-    ]);
+    next!();
   }
 
   @CheckConfig(ConfigProperty.MEME_STAT)
-  private async changeMemeStat(ctx: ContextMessageUpdate, actionType: MemeAction): Promise<void> {
+  private async changeMemeStat(ctx: TelegrafContext, actionType: MemeAction): Promise<void> {
     const { message } = ctx.update.callback_query!;
     const chatId = ctx.chat!.id;
     const messageId = message!.message_id;
@@ -114,6 +110,21 @@ export default class MemeService extends BaseService {
 
     await this.updateStatMessage(chatId, messageId);
     await ctx.answerCbQuery(response.message);
+  }
+
+  protected initListeners(): void {
+    this.bot.addListeners([
+      {
+        type: BotCommandType.ACTION,
+        name: MemeAction.LIKE,
+        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.LIKE),
+      },
+      {
+        type: BotCommandType.ACTION,
+        name: MemeAction.DISLIKE,
+        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.DISLIKE),
+      },
+    ]);
   }
 
   private async updateStatMessage(chatId: number, messageId: number): Promise<void> {

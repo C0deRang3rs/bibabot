@@ -21,10 +21,10 @@ export enum ProductActionContext {
 export enum ActivityContext {
   MESSAGE = 'Сообщение',
   PHOTO = 'Картинка',
-  VOICE = 'Стикер',
-  STICKER = 'Видос',
-  VIDEO = 'Войс',
-  SMALL_PEPE = 'Один см бибы',
-  BIBA_CM = 'Маленькая биба',
+  VOICE = 'Войс',
+  STICKER = 'Стикер',
+  VIDEO = 'Видос',
+  SMALL_PEPE = 'Маленькая биба',
+  BIBA_CM = 'Один см бибы',
   MEME_LIKE = 'Лайк на мем',
 }

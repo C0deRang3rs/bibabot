@@ -1,30 +1,24 @@
-import Server from './core/server';
-import Queue from './core/queue';
 import TrashService from './services/trash.service';
 import ChangeTitleService from './services/change-title.service';
 import BibaService from './services/biba.service';
 import BibacoinService from './services/bibacoin.service';
-import Redis from './core/redis';
-import Bot from './core/bot';
 import ShopService from './services/shop.service';
 import GlobalService from './services/global.service';
 import MemeService from './services/meme.service';
 import ConfigService from './services/config.service';
+import App from './core/app';
+import StickerService from './services/sticker.service';
 
-// CORE
-Redis.getInstance();
-new Server();
-new Queue('auto:rename');
-new Queue('daily:checks');
+const app = new App([
+  ChangeTitleService,
+  BibaService,
+  TrashService,
+  BibacoinService,
+  ShopService,
+  GlobalService,
+  MemeService,
+  ConfigService,
+  StickerService,
+]);
 
-// SERVICES
-ChangeTitleService.getInstance();
-BibaService.getInstance();
-TrashService.getInstance();
-BibacoinService.getInstance();
-ShopService.getInstance();
-GlobalService.getInstance();
-MemeService.getInstance();
-ConfigService.getInstance();
-Bot.getInstance().applyListeners();
-GlobalService.getInstance().initMessageHandler();
+app.start();

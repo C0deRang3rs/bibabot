@@ -1,6 +1,6 @@
 import Bull from 'bull';
-import { ContextMessageUpdate, Markup } from 'telegraf';
-
+import { Markup } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
 import { BibaCommand, BibaDebugCommand } from '../types/globals/commands.types';
 import {
@@ -56,10 +56,11 @@ export default class BibaService extends BaseService {
     return BibaService.instance;
   }
 
-  @DeleteRequestMessage()
-  private static async unrankedBibaMetr(ctx: ContextMessageUpdate): Promise<Message> {
-    const username = getUsernameFromContext(ctx);
-    return ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
+  private static getNewBibaMessage(oldSize: number, newSize: number): string {
+    const diff = oldSize - newSize;
+
+    if (diff === 0) return SAME_BIBA;
+    return oldSize - newSize > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA;
   }
 
   private static getDailyMessage(allBibas: Array<Biba>): string {
@@ -86,37 +87,9 @@ export default class BibaService extends BaseService {
          + `Но не больше ${MAX_DAILY_BIBACOINT_INCOME}`;
   }
 
-  @DeleteResponseMessage(10000)
-  private static async sendRerollBlockedMessage(ctx: ContextMessageUpdate, username: string): Promise<Message> {
-    const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
-
-    return ctx.reply(
-      `${username} сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
-      Markup.inlineKeyboard(
-        [Markup.callbackButton(
-          `Перемерять бибу 💰${price}¢`,
-          shopUtils.getActionByProduct(Product.BIBA_REROLL),
-        )],
-      ).extra(),
-    );
-  }
-
-  private static getNewBibaMessage(oldSize: number, newSize: number): string {
-    const diff = oldSize - newSize;
-
-    if (diff === 0) return SAME_BIBA;
-    return oldSize - newSize > 0 ? POSITIVE_BIBA : NEGATIVE_BIBA;
-  }
-
-  @DeleteRequestMessage()
-  @DeleteLastMessage('biba_table')
-  private static async bibaTable(ctx: ContextMessageUpdate): Promise<Message> {
-    return ctx.reply(await getBibaTableText(ctx.chat!.id));
-  }
-
   @UpdateBibaTable()
   @DeleteRequestMessage()
-  public async bibaMetr(ctx: ContextMessageUpdate, forceReroll?: boolean): Promise<Message> {
+  public async bibaMetr(ctx: TelegrafContext, forceReroll?: boolean): Promise<Message> {
     const user = (ctx.message && ctx.message!.from!) || ctx.from!;
     const username = getUsernameFromContext(ctx);
     const userId = user.id;
@@ -153,6 +126,134 @@ export default class BibaService extends BaseService {
     }
 
     return ctx.reply(bibaMessage);
+  }
+
+  @DeleteRequestMessage()
+  private static async unrankedBibaMetr(ctx: TelegrafContext): Promise<Message> {
+    const username = getUsernameFromContext(ctx);
+    return ctx.reply(`У ${username} биба ${Math.floor(Math.random() * (35 + 1))} см`);
+  }
+
+  @DeleteResponseMessage(10000)
+  private static async sendRerollBlockedMessage(ctx: TelegrafContext, username: string): Promise<Message> {
+    const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
+
+    return ctx.reply(
+      `${username} сегодня уже мерял бибу, приходи завтра или купи ещё одну попытку за ${price} бибакоинов`,
+      Markup.inlineKeyboard(
+        [Markup.callbackButton(
+          `Перемерять бибу 💰${price}¢`,
+          shopUtils.getActionByProduct(Product.BIBA_REROLL),
+        )],
+      ).extra(),
+    );
+  }
+
+  @CheckConfig(ConfigProperty.DAILY)
+  private async triggerDailyBibaForChat(chatId: number): Promise<void> {
+    console.log(`[${chatId}] Daily biba`);
+    await this.bibacoinService.dailyIncome(chatId);
+
+    const allBibas = await this.bibaRepo.getAllBibasByChatId(chatId);
+    const message = BibaService.getDailyMessage(allBibas);
+
+    if (!allBibas.length) {
+      await this.bot.app.telegram.sendMessage(chatId, message);
+      return;
+    }
+
+    await this.bot.app.telegram.sendMessage(chatId, message);
+
+    await this.bibaRepo.setAllBibasOutdated(chatId);
+  }
+
+  @DeleteRequestMessage()
+  @DeleteLastMessage('biba_table')
+  private static async bibaTable(ctx: TelegrafContext): Promise<Message> {
+    return ctx.reply(await getBibaTableText(ctx.chat!.id));
+  }
+
+  @UpdateBibaTable()
+  @DeleteRequestMessage()
+  @ReplyWithError()
+  private async sellBiba(ctx: TelegrafContext): Promise<Message> {
+    const chatId = ctx.chat!.id;
+    const userId = ctx.from!.id;
+    const username = getUsernameFromContext(ctx);
+    const params = ctx.message!.text!.split(' ');
+    const count = parseInt(params[1], 10);
+
+    if (!count) throw new RepliableError('Wrong format', ctx);
+    if (count <= 0) throw new RepliableError(`${username} ты не можешь продать меньше 1 см`, ctx);
+
+    const biba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
+    if (!biba) throw new RepliableError(`${username} у тебя нет бибы`, ctx);
+
+    const newSize = biba.size - count;
+
+    if (newSize < 0) throw new RepliableError(`${username} ты не можешь продать больше, чем отрастил`, ctx);
+
+    await this.bibaRepo.setBiba(chatId, { ...biba, size: newSize });
+    const cost = count * shopUtils.getPriceByActivity(BibacoinActivity.BIBA_CM);
+    await this.bibacoinService.addCoins(userId, chatId, cost);
+
+    return ctx.reply(`У ${username} отрезали ${count} см бибы, но взамен он получил ${cost} бибакоинов`);
+  }
+
+  @UpdateBibaTable()
+  @ReplyWithError()
+  private async removeBiba(ctx: TelegrafContext): Promise<Message> {
+    const params = ctx.message!.text!.split(' ');
+    const chatId = ctx.chat!.id;
+
+    if (params.length < 1 || params.length > 2) throw new RepliableError('Wrong format', ctx);
+
+    const targetUsername = params[1];
+
+    if (targetUsername && targetUsername.includes('@')) {
+      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
+
+      if (!targetBiba) throw new RepliableError('Wrong user', ctx);
+
+      await this.bibaRepo.removeBiba(chatId, targetBiba.userId);
+    } else if (targetUsername && !targetUsername.includes('@')) {
+      throw new RepliableError('Wrong format', ctx);
+    } else {
+      await this.bibaRepo.removeBiba(chatId, ctx.from!.id);
+    }
+
+    return ctx.reply('Done');
+  }
+
+  @UpdateBibaTable()
+  @ReplyWithError()
+  private async setBiba(ctx: TelegrafContext): Promise<Message> {
+    const params = ctx.message!.text!.split(' ');
+    const chatId = ctx.chat!.id;
+
+    if (params.length < 2 || params.length > 3) throw new RepliableError('Wrong format', ctx);
+
+    const size = parseInt(params[1], 10);
+    const targetUsername = params[2];
+
+    if (targetUsername && targetUsername.includes('@')) {
+      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
+
+      if (!targetBiba) throw new RepliableError('Wrong user', ctx);
+
+      await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
+    } else if (targetUsername && !targetUsername.includes('@')) {
+      throw new RepliableError('Wrong format', ctx);
+    } else {
+      const targetBiba = await this.bibaRepo.getBibaByIds(chatId, ctx.from!.id);
+
+      if (!targetBiba) throw new RepliableError('У этого пользователя нет бибы', ctx);
+
+      await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
+    }
+
+    return ctx.reply('Done');
   }
 
   public async dailyBiba(done?: Bull.DoneCallback, forcedChatId?: number): Promise<void> {
@@ -214,106 +315,5 @@ export default class BibaService extends BaseService {
     }
 
     this.bot.addListeners(commands);
-  }
-
-  @CheckConfig(ConfigProperty.DAILY)
-  private async triggerDailyBibaForChat(chatId: number): Promise<void> {
-    console.log(`[${chatId}] Daily biba`);
-    await this.bibacoinService.dailyIncome(chatId);
-
-    const allBibas = await this.bibaRepo.getAllBibasByChatId(chatId);
-    const message = BibaService.getDailyMessage(allBibas);
-
-    if (!allBibas.length) {
-      await this.bot.app.telegram.sendMessage(chatId, message);
-      return;
-    }
-
-    await this.bot.app.telegram.sendMessage(chatId, message);
-
-    await this.bibaRepo.setAllBibasOutdated(chatId);
-  }
-
-  @UpdateBibaTable()
-  @DeleteRequestMessage()
-  @ReplyWithError()
-  private async sellBiba(ctx: ContextMessageUpdate): Promise<Message> {
-    const chatId = ctx.chat!.id;
-    const userId = ctx.from!.id;
-    const username = getUsernameFromContext(ctx);
-    const params = ctx.message!.text!.split(' ');
-    const count = parseInt(params[1], 10);
-
-    if (!count) throw new RepliableError('Wrong format', ctx);
-    if (count <= 0) throw new RepliableError(`${username} ты не можешь продать меньше 1 см`, ctx);
-
-    const biba = await this.bibaRepo.getBibaByIds(chatId, userId);
-
-    if (!biba) throw new RepliableError(`${username} у тебя нет бибы`, ctx);
-
-    const newSize = biba.size - count;
-
-    if (newSize < 0) throw new RepliableError(`${username} ты не можешь продать больше, чем отрастил`, ctx);
-
-    await this.bibaRepo.setBiba(chatId, { ...biba, size: newSize });
-    const cost = count * shopUtils.getPriceByActivity(BibacoinActivity.BIBA_CM);
-    await this.bibacoinService.addCoins(userId, chatId, cost);
-
-    return ctx.reply(`У ${username} отрезали ${count} см бибы, но взамен он получил ${cost} бибакоинов`);
-  }
-
-  @UpdateBibaTable()
-  @ReplyWithError()
-  private async removeBiba(ctx: ContextMessageUpdate): Promise<Message> {
-    const params = ctx.message!.text!.split(' ');
-    const chatId = ctx.chat!.id;
-
-    if (params.length < 1 || params.length > 2) throw new RepliableError('Wrong format', ctx);
-
-    const targetUsername = params[1];
-
-    if (targetUsername && targetUsername.includes('@')) {
-      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
-
-      if (!targetBiba) throw new RepliableError('Wrong user', ctx);
-
-      await this.bibaRepo.removeBiba(chatId, targetBiba.userId);
-    } else if (targetUsername && !targetUsername.includes('@')) {
-      throw new RepliableError('Wrong format', ctx);
-    } else {
-      await this.bibaRepo.removeBiba(chatId, ctx.from!.id);
-    }
-
-    return ctx.reply('Done');
-  }
-
-  @UpdateBibaTable()
-  @ReplyWithError()
-  private async setBiba(ctx: ContextMessageUpdate): Promise<Message> {
-    const params = ctx.message!.text!.split(' ');
-    const chatId = ctx.chat!.id;
-
-    if (params.length < 2 || params.length > 3) throw new RepliableError('Wrong format', ctx);
-
-    const size = parseInt(params[1], 10);
-    const targetUsername = params[2];
-
-    if (targetUsername && targetUsername.includes('@')) {
-      const targetBiba = await this.bibaRepo.findBibaByUsernameInChat(chatId, targetUsername);
-
-      if (!targetBiba) throw new RepliableError('Wrong user', ctx);
-
-      await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
-    } else if (targetUsername && !targetUsername.includes('@')) {
-      throw new RepliableError('Wrong format', ctx);
-    } else {
-      const targetBiba = await this.bibaRepo.getBibaByIds(chatId, ctx.from!.id);
-
-      if (!targetBiba) throw new RepliableError('У этого пользователя нет бибы', ctx);
-
-      await this.bibaRepo.setBiba(chatId, { ...targetBiba, size });
-    }
-
-    return ctx.reply('Done');
   }
 }

@@ -1,4 +1,5 @@
-import { ContextMessageUpdate, Markup } from 'telegraf';
+import { Markup } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
 import { BotCommandType } from '../types/core/bot.types';
 import {
@@ -43,7 +44,7 @@ export default class ShopService extends BaseService {
 
   @DeleteRequestMessage()
   @DeleteLastMessage('shop')
-  private static async sendProductsList(ctx: ContextMessageUpdate): Promise<Message> {
+  private static async sendProductsList(ctx: TelegrafContext): Promise<Message> {
     const list = shopUtils.getProductsList();
 
     return ctx.reply(
@@ -58,57 +59,8 @@ export default class ShopService extends BaseService {
     );
   }
 
-  protected initListeners(): void {
-    this.bot.addListeners([
-      {
-        type: BotCommandType.ACTION,
-        name: ShopAction.BIBA_CM,
-        callback: (ctx): Promise<void> => this.buyOneCM(ctx),
-      },
-      {
-        type: BotCommandType.ACTION,
-        name: ShopAction.BIBA_REROLL,
-        callback: (ctx): Promise<void> => this.buyReroll(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
-        name: ShopCommand.SHOP,
-        callback: (ctx): Promise<Message> => ShopService.sendProductsList(ctx),
-      },
-    ]);
-  }
-
-  private async buyReroll(ctx: ContextMessageUpdate): Promise<void> {
-    try {
-      const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
-      const chatId = ctx.chat!.id;
-      const userId = ctx.from!.id;
-      await this.bibacoinService.hasEnoughCredits(userId, chatId, price);
-
-      const currentBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
-
-      if (!currentBiba) {
-        await ctx.answerCbQuery(NO_BIBA_TO_REROLL);
-        return;
-      }
-
-      if (currentBiba.outdated) {
-        await ctx.answerCbQuery('Биба уже пованивает, обнови её с помощью /biba');
-        return;
-      }
-
-      await this.bibaService.bibaMetr(ctx, true);
-
-      await this.bibacoinService.withdrawCoins(userId, chatId, price);
-      await ctx.answerCbQuery('Реролл куплен!');
-    } catch (e) {
-      await ctx.answerCbQuery(e.message, true);
-      throw e;
-    }
-  }
-
   @UpdateBibaTable()
-  private async buyOneCM(ctx: ContextMessageUpdate): Promise<void> {
+  private async buyOneCM(ctx: TelegrafContext): Promise<void> {
     try {
       const price = shopUtils.getProductPrice(Product.BIBA_CM);
       const chatId = ctx.chat!.id;
@@ -131,6 +83,55 @@ export default class ShopService extends BaseService {
 
       await this.bibacoinService.withdrawCoins(userId, chatId, price);
       await ctx.answerCbQuery(`Теперь твоя биба ${currentBiba.size + 1} см`);
+    } catch (e) {
+      await ctx.answerCbQuery(e.message, true);
+      throw e;
+    }
+  }
+
+  protected initListeners(): void {
+    this.bot.addListeners([
+      {
+        type: BotCommandType.ACTION,
+        name: ShopAction.BIBA_CM,
+        callback: (ctx): Promise<void> => this.buyOneCM(ctx),
+      },
+      {
+        type: BotCommandType.ACTION,
+        name: ShopAction.BIBA_REROLL,
+        callback: (ctx): Promise<void> => this.buyReroll(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: ShopCommand.SHOP,
+        callback: (ctx): Promise<Message> => ShopService.sendProductsList(ctx),
+      },
+    ]);
+  }
+
+  private async buyReroll(ctx: TelegrafContext): Promise<void> {
+    try {
+      const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
+      const chatId = ctx.chat!.id;
+      const userId = ctx.from!.id;
+      await this.bibacoinService.hasEnoughCredits(userId, chatId, price);
+
+      const currentBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
+      if (!currentBiba) {
+        await ctx.answerCbQuery(NO_BIBA_TO_REROLL);
+        return;
+      }
+
+      if (currentBiba.outdated) {
+        await ctx.answerCbQuery('Биба уже пованивает, обнови её с помощью /biba');
+        return;
+      }
+
+      await this.bibaService.bibaMetr(ctx, true);
+
+      await this.bibacoinService.withdrawCoins(userId, chatId, price);
+      await ctx.answerCbQuery('Реролл куплен!');
     } catch (e) {
       await ctx.answerCbQuery(e.message, true);
       throw e;

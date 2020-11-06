@@ -1,0 +1,14 @@
+version: "3.7"
+
+services:
+  bot:
+    build:
+        context: ./
+    expose:
+      - 3000
+    ports:
+      - 3000:3000
+    command: ["npm", "run", "watch:dev"]
+    volumes:
+      - ./src:/app/src
+      - ./imageTemplates:/app/imageTemplates

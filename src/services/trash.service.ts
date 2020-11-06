@@ -1,4 +1,4 @@
-import { ContextMessageUpdate } from 'telegraf';
+import { TelegrafContext } from 'telegraf/typings/context';
 import fs from 'fs';
 import { Message } from 'telegraf/typings/telegram-types';
 import { TrashCommand } from '../types/globals/commands.types';
@@ -34,7 +34,7 @@ export default class TrashService extends BaseService {
   }
 
   @CheckConfig(ConfigProperty.TRASH_REPLY)
-  public static async trashHandler(ctx: ContextMessageUpdate, next: Function | undefined): Promise<Function> {
+  public static async trashHandler(ctx: TelegrafContext, next: Function | undefined): Promise<Function> {
     if (!ctx.message || !ctx.message.text || !ctx.message.from) return next!();
 
     const msg = ctx.message.text.toLowerCase();
@@ -53,7 +53,7 @@ export default class TrashService extends BaseService {
 
   @ReplyWithError()
   @DeleteRequestMessage()
-  private static async roll(ctx: ContextMessageUpdate): Promise<Message> {
+  private static async roll(ctx: TelegrafContext): Promise<Message> {
     const username = getUsernameFromContext(ctx);
     const payload = ctx.message!.text!.split(' ')[1];
 
@@ -81,6 +81,30 @@ export default class TrashService extends BaseService {
     return ctx.reply(`${username} рандомит ${Math.floor(Math.random() * (to - from + 1) + from)}`);
   }
 
+  @DeleteRequestMessage()
+  private async coinFlip(ctx: TelegrafContext): Promise<Message> {
+    const username = getUsernameFromContext(ctx);
+    const flipResult = Math.floor(Math.random() * 2) === 0 ? 'Heads' : 'Tails';
+
+    await this.statRepo.incrementStatCount(flipResult.toLowerCase());
+
+    return ctx.reply(`${username} выкидывает ${flipResult}`);
+  }
+
+  @DeleteRequestMessage()
+  @DeleteLastMessage('flip_stat')
+  private async coinFlipStat(ctx: TelegrafContext): Promise<Message> {
+    const tailsCount = await this.statRepo.getStatCount(CoinSide.TAILS);
+    const headsCount = await this.statRepo.getStatCount(CoinSide.HEADS);
+    const tailsStat = Math.round((tailsCount / (tailsCount + headsCount)) * 100);
+    const headsStat = Math.round((headsCount / (tailsCount + headsCount)) * 100);
+
+    return ctx.reply(
+      `Tails - ${tailsStat || 0}% - ${tailsCount} раз\n`
+    + `Heads - ${headsStat || 0}% - ${headsCount} раз`,
+    );
+  }
+
   protected initListeners(): void {
     this.bot.addListeners([
       {
@@ -99,29 +123,5 @@ export default class TrashService extends BaseService {
         callback: (ctx): Promise<Message> => this.coinFlipStat(ctx),
       },
     ]);
-  }
-
-  @DeleteRequestMessage()
-  private async coinFlip(ctx: ContextMessageUpdate): Promise<Message> {
-    const username = getUsernameFromContext(ctx);
-    const flipResult = Math.floor(Math.random() * 2) === 0 ? 'Heads' : 'Tails';
-
-    await this.statRepo.incrementStatCount(flipResult.toLowerCase());
-
-    return ctx.reply(`${username} выкидывает ${flipResult}`);
-  }
-
-  @DeleteRequestMessage()
-  @DeleteLastMessage('flip_stat')
-  private async coinFlipStat(ctx: ContextMessageUpdate): Promise<Message> {
-    const tailsCount = await this.statRepo.getStatCount(CoinSide.TAILS);
-    const headsCount = await this.statRepo.getStatCount(CoinSide.HEADS);
-    const tailsStat = Math.round((tailsCount / (tailsCount + headsCount)) * 100);
-    const headsStat = Math.round((headsCount / (tailsCount + headsCount)) * 100);
-
-    return ctx.reply(
-      `Tails - ${tailsStat || 0}% - ${tailsCount} раз\n`
-    + `Heads - ${headsStat || 0}% - ${headsCount} раз`,
-    );
   }
 }
