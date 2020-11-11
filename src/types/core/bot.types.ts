@@ -98,3 +98,10 @@ export interface MaskPosition {
   /** Mask scaling coefficient. For example, 2.0 means double size. */
   scale: number;
 }
+
+export enum TelegramError {
+  STICKERS_TOO_MUCH = 'Bad Request: STICKERS_TOO_MUCH',
+  STICKERSET_INVALID = 'Bad Request: STICKERSET_INVALID',
+  USER_IS_BOT = 'Bad Request: USER_IS_BOT',
+  PEER_ID_INVALID = 'Bad Request: PEER_ID_INVALID',
+}

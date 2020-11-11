@@ -15,7 +15,9 @@ import * as shopUtils from '../utils/shop.util';
 export default class MemeService extends BaseService {
   private static instance: MemeService;
 
-  private reliedMediaIds = new Set();
+  private repliedMediaIds = new Set();
+
+  private timeoutMap = new Map<number, NodeJS.Timeout>();
 
   private constructor(
     private readonly memeRepo: MemeRepository,
@@ -38,17 +40,29 @@ export default class MemeService extends BaseService {
   @CheckMessageContent(MessageContent.PHOTO)
   @CheckConfig(ConfigProperty.MEME_STAT)
   public async handleMeme(ctx: TelegrafContext, next: Function | undefined): Promise<void> {
+    if (!ctx.chat) {
+      return;
+    }
+
+    if (this.timeoutMap.has(ctx.chat!.id)) {
+      clearTimeout(this.timeoutMap.get(ctx.chat!.id)!);
+    }
+
+    this.timeoutMap.set(ctx.chat!.id, setTimeout(() => {
+      this.repliedMediaIds = new Set();
+    }, 500));
+
     const chatId = ctx.chat!.id;
     const messageId = ctx.message!.message_id;
     const mediaId = ctx.message!.media_group_id!;
-    const isReplied = this.reliedMediaIds.has(mediaId);
+    const isReplied = this.repliedMediaIds.has(mediaId);
 
-    if (isReplied) {
+    if (isReplied && mediaId) {
       next!();
       return;
     }
 
-    this.reliedMediaIds.add(mediaId);
+    this.repliedMediaIds.add(mediaId);
 
     const responseMessage = await ctx.reply(
       'Оцените данный мем',

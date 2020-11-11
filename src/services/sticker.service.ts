@@ -4,7 +4,7 @@ import puppeteer from 'puppeteer';
 import axios from 'axios';
 import { TelegrafContext } from 'telegraf/typings/context';
 import BaseService from './base.service';
-import { BotCommandType } from '../types/core/bot.types';
+import { BotCommandType, TelegramError } from '../types/core/bot.types';
 import { StickerCommand } from '../types/globals/commands.types';
 import StickerSetRepository from '../repositories/sticker.repo';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
@@ -13,7 +13,7 @@ import OnlyReply from '../decorators/only.reply.decorator';
 import OnlyMention from '../decorators/only.mention.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
-import { MAX_TEXT_LENGTH } from '../types/services/sticker.service.types';
+import { MAX_TEXT_LENGTH, STATUS_CREATOR, StickerSet } from '../types/services/sticker.service.types';
 
 export default class StickerService extends BaseService {
   private static instance: StickerService;
@@ -61,6 +61,7 @@ export default class StickerService extends BaseService {
     await browser.close();
   }
 
+  @DeleteRequestMessage()
   @ReplyWithError()
   @OnlyMention(false)
   @OnlyReply(false)
@@ -68,6 +69,8 @@ export default class StickerService extends BaseService {
     const reply = ctx.message!.reply_to_message!;
     const text = reply.text!;
     const messageAuthor = reply.from!;
+    const chatId = ctx!.chat!.id;
+    let ownerId = ctx.message!.from!.id;
 
     if (!text) {
       throw new RepliableError('У этого сообщения нет текста', ctx);
@@ -77,52 +80,97 @@ export default class StickerService extends BaseService {
       throw new RepliableError('Слишком длинное сообщение 😢', ctx);
     }
 
-    const chatId = ctx!.chat!.id;
-    const setName = `set_${chatId.toString().replace('-', '1')}_by_${this.bot.app.options.username}`;
-
     const date = new Date(reply.date * 1000);
     date.setTime(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
     const time = `${`0${date.getUTCHours()}`.slice(-2)}:${`0${date.getUTCMinutes()}`.slice(-2)}`;
 
     await StickerService.createImage(text, messageAuthor, time);
-    const imageStream = fs.createReadStream(`${__dirname}/../../example.png`);
+    const imageStream = fs.readFileSync(`${__dirname}/../../example.png`);
 
-    const isCreated = await this.stickerSetRepo.getStickerSet(chatId);
+    const owner = (await this.bot.app.telegram.getChatAdministrators(chatId)).find((usr) => usr.status === STATUS_CREATOR)?.user;
 
-    try {
-      if (isCreated) {
-        await this.bot.app.telegram.addStickerToSet(
-          ctx.message!.from!.id,
-          setName,
-          { png_sticker: { source: imageStream }, emojis: '🍌' },
-          false,
-        );
-      } else {
+    if (owner) {
+      ownerId = owner.id;
+    }
+
+    const createdSet = await this.stickerSetRepo.getStickerSet(chatId);
+
+    let setName;
+    let isStickerAdded = false;
+    if (createdSet) {
+      // eslint-disable-next-line no-restricted-syntax
+      for await (const name of createdSet.names) {
+        try {
+          await this.bot.app.telegram.addStickerToSet(
+            ownerId,
+            name,
+            { png_sticker: { source: imageStream }, emojis: '🍌' },
+            false,
+          );
+
+          setName = name;
+          isStickerAdded = true;
+          break;
+        } catch (err) {
+          if (err.description === TelegramError.STICKERSET_INVALID) {
+            await this.stickerSetRepo.setStickerSet(chatId, {
+              names: createdSet.names.filter((n) => n !== name),
+              ownerId: createdSet.ownerId,
+            });
+          }
+
+          if (
+            err.description !== TelegramError.STICKERS_TOO_MUCH
+            && err.description !== TelegramError.STICKERSET_INVALID
+          ) {
+            throw err;
+          }
+        }
+      }
+    }
+    if (!isStickerAdded) {
+      try {
+        const payload = {
+          ownerId,
+        } as StickerSet;
+
+        if (createdSet) {
+          // eslint-disable-next-line max-len
+          setName = `set${createdSet.names.length + 1}_${chatId.toString().replace('-', '1')}_by_${this.bot.app.options.username}`;
+          payload.names = [...createdSet.names, setName];
+        } else {
+          setName = `set1_${chatId.toString().replace('-', '1')}_by_${this.bot.app.options.username}`;
+          payload.names = [setName];
+        }
+
         await this.bot.app.telegram.createNewStickerSet(
-          ctx.message!.from!.id,
+          ownerId,
           setName,
           ctx.chat!.title!,
           { png_sticker: { source: imageStream }, emojis: '🍌' },
         );
+        isStickerAdded = true;
 
-        await this.stickerSetRepo.setStickerSet(chatId, messageAuthor.id, setName);
-      }
-    } catch (err) {
-      if (err.description === 'Bad Request: USER_IS_BOT') {
-        throw new RepliableError('Первый стикер в сете не может быть от бота', ctx);
-      }
+        await this.stickerSetRepo.setStickerSet(chatId, payload);
+      } catch (err) {
+        if (err.description === TelegramError.USER_IS_BOT) {
+          throw new RepliableError('Первый стикер в сете не может быть от бота', ctx);
+        }
 
-      if (err.description === 'Bad Request: STICKERS_TOO_MUCH') {
-        throw new RepliableError('Сет переполнен', ctx);
-      }
+        if (err.description === TelegramError.PEER_ID_INVALID) {
+          throw new RepliableError('Бот должен быть активирован в лс у создателя группы', ctx);
+        }
 
-      throw err;
+        throw err;
+      }
     }
 
-    const set = await this.bot.app.telegram.getStickerSet(setName);
-    const sticker = set.stickers.pop()!.file_id;
+    if (isStickerAdded && setName) {
+      const set = await this.bot.app.telegram.getStickerSet(setName);
+      const sticker = set.stickers.pop()!.file_id;
 
-    await ctx.replyWithSticker(sticker);
+      await ctx.replyWithSticker(sticker);
+    }
 
     next!();
   }
