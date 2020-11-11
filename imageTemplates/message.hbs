@@ -15,6 +15,10 @@
     background-color: red;
   }
 
+  html, body{
+    font-size: 5.8px;
+  }
+
   #message {
     padding: 0;
     padding-left: 20px;
@@ -26,37 +30,42 @@
     margin: auto;
     background-color: white;
     word-wrap: break-word;
-    padding: 15px 25px 15px 25px;
-    font-size: 35px;
+    padding: 1.3rem 6rem 2.1rem 4.3rem;
+    font-size: 7rem;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
     display: inline-block;
-    border-radius: 35px 35px 35px 0;
+    border-radius: 5rem 7rem 7rem 6rem;
     position: relative;
   }
 
   .message__author {
     font-weight: 600;
+    font-size: 6rem;
+    padding-left: 0.2em;
+    margin-bottom: 1.6rem;
   }
 
   .message::before {
     content: "";
     background: white;
     width: 60px;
-    height: 60px;
+    height: 80px;
     position: absolute;
     clip-path: polygon(0% 100%, 4% 100%, 13% 99%, 19% 98%, 26% 97%, 32% 95%, 38% 92%, 45% 88%, 52% 83%, 60% 78%, 66% 73%, 71% 68%, 19% 41%, 19% 51%, 19% 61%, 19% 71%, 17% 80%, 14% 86%, 8% 93%, 1% 98%);
     left: -11px;
     bottom: 0;
+    z-index: -1;
   }
 
   .message__time {
-    font-size: 0.8em;
+    font-size: 0.68em;
     font-weight: 300;
     color: #909090;
     float: right;
     display: inline-block;
-    margin-top: 20px;
-    margin-left: 20px;
+    margin-top: 2.5rem;
+    margin-left: 2rem;
+    margin-right: 1.5rem;
   }
 
   .message__text {
@@ -66,20 +75,20 @@
 </style>
 
 <body>
-<div id="message">
-  <div class="message">
-    <div class="message__author" style="color: {{color}}">
-      {{messageAuthor.first_name}}
-      {{messageAuthor.last_name}}
-    </div>
-    <div class="message__text">
-      {{text}}
-      <div class="message__time">
-        {{time}}
+  <div id="message">
+    <div class="message">
+      <div class="message__author" style="color: {{color}}">
+        {{messageAuthor.first_name}}
+        {{messageAuthor.last_name}}
+      </div>
+      <div class="message__text">
+        {{text}}
+        <div class="message__time">
+          {{time}}
+        </div>
       </div>
     </div>
   </div>
-</div>
 </body>
 
 </html>

@@ -16,7 +16,7 @@ export default class StickerSetRepository extends BaseRepository {
     return parsed || null;
   }
 
-  public async setStickerSet(chatId: number, ownerId: number, name: string): Promise<void> {
-    await this.redis.setAsync(`${this.entityName}:${chatId}`, JSON.stringify({ ownerId, name }));
+  public async setStickerSet(chatId: number, set: StickerSet): Promise<void> {
+    await this.redis.setAsync(`${this.entityName}:${chatId}`, JSON.stringify(set));
   }
 }
