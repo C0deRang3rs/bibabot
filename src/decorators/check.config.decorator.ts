@@ -9,13 +9,13 @@ const CheckConfig = (property: ConfigProperty) => (_target: object, _propKey: st
   // eslint-disable-next-line no-param-reassign
   desc.value = async function wrapped(
     ...args: [TelegrafContext | number, Function | number | boolean | MemeAction | undefined]
-  ): Promise<void> {
+  ): Promise<object> {
     let chatId: number;
 
     switch (typeof args[0]) {
       case 'number': [chatId] = args; break;
       case 'object': chatId = args[0].chat!.id; break;
-      default: return;
+      default: return {};
     }
 
     const secondArgument = args[1];
@@ -27,11 +27,11 @@ const CheckConfig = (property: ConfigProperty) => (_target: object, _propKey: st
           args[1]();
         }
 
-        return;
+        return {};
       }
     }
 
-    await method.apply(this, args);
+    return method.apply(this, args);
   };
 };
 

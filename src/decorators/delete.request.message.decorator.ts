@@ -5,16 +5,15 @@ const DeleteRequestMessage = () => (_target: object, _propKey: string, desc: Pro
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
-  desc.value = async function wrapped(...args: TelegrafContext[]): Promise<void> {
-    const isActionCommand = args[1];
+  desc.value = async function wrapped(...args: [TelegrafContext, boolean | Function | undefined]): Promise<object> {
     const botId = (await Bot.getInstance().app.telegram.getMe()).id;
     const botUser = await Bot.getInstance().app.telegram.getChatMember(args[0].chat!.id, botId);
 
-    if (botUser.can_delete_messages && !isActionCommand) {
+    if (botUser.can_delete_messages) {
       await args[0].deleteMessage();
     }
 
-    await method.apply(this, args);
+    return method.apply(this, args);
   };
 };
 

@@ -17,6 +17,7 @@ import BibaRepository from '../repositories/biba.repo';
 import * as shopUtils from '../utils/shop.util';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import RepliableError from '../types/globals/repliable.error';
+import { BotMessage } from '../types/globals/message.types';
 
 export default class BibacoinService extends BaseService {
   private static instance: BibacoinService;
@@ -40,7 +41,7 @@ export default class BibacoinService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteLastMessage('income')
+  @DeleteLastMessage(BotMessage.INCOME)
   private static async sendIncomeList(ctx: TelegrafContext): Promise<Message> {
     const list = shopUtils.getActivitiesList();
 
