@@ -24,14 +24,16 @@ import {
   DAILY_BIBACOINT_INCOME_PERCENT,
   MAX_DAILY_BIBACOINT_INCOME,
 } from '../types/services/bibacoin.service.types';
-import { getUsernameFromContext, getBibaTableText } from '../utils/global.util';
-import UpdateBibaTable from '../decorators/update.biba.table.decorator';
+import { getUpdatedMessage } from '../utils/lists.util';
+import UpdateLastMessage from '../decorators/update.last.message.decorator';
 import CheckConfig from '../decorators/check.config.decorator';
 import { ConfigProperty } from '../types/services/config.service.types';
 import { Product } from '../types/services/shop.service.types';
 import * as shopUtils from '../utils/shop.util';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import RepliableError from '../types/globals/repliable.error';
+import { BotMessage } from '../types/globals/message.types';
+import { getUsernameFromContext } from '../utils/data.utils';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -87,7 +89,7 @@ export default class BibaService extends BaseService {
          + `Но не больше ${MAX_DAILY_BIBACOINT_INCOME}`;
   }
 
-  @UpdateBibaTable()
+  @UpdateLastMessage(BotMessage.BIBA_TABLE)
   @DeleteRequestMessage()
   public async bibaMetr(ctx: TelegrafContext, forceReroll?: boolean): Promise<Message> {
     const user = (ctx.message && ctx.message!.from!) || ctx.from!;
@@ -168,12 +170,13 @@ export default class BibaService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteLastMessage('biba_table')
+  @DeleteLastMessage(BotMessage.BIBA_TABLE)
   private static async bibaTable(ctx: TelegrafContext): Promise<Message> {
-    return ctx.reply(await getBibaTableText(ctx.chat!.id));
+    const { text, extra } = await getUpdatedMessage(BotMessage.BIBA_TABLE, ctx.chat!.id);
+    return ctx.reply(text, extra);
   }
 
-  @UpdateBibaTable()
+  @UpdateLastMessage(BotMessage.BIBA_TABLE)
   @DeleteRequestMessage()
   @ReplyWithError()
   private async sellBiba(ctx: TelegrafContext): Promise<Message> {
@@ -201,7 +204,7 @@ export default class BibaService extends BaseService {
     return ctx.reply(`У ${username} отрезали ${count} см бибы, но взамен он получил ${cost} бибакоинов`);
   }
 
-  @UpdateBibaTable()
+  @UpdateLastMessage(BotMessage.BIBA_TABLE)
   @ReplyWithError()
   private async removeBiba(ctx: TelegrafContext): Promise<Message> {
     const params = ctx.message!.text!.split(' ');
@@ -226,7 +229,7 @@ export default class BibaService extends BaseService {
     return ctx.reply('Done');
   }
 
-  @UpdateBibaTable()
+  @UpdateLastMessage(BotMessage.BIBA_TABLE)
   @ReplyWithError()
   private async setBiba(ctx: TelegrafContext): Promise<Message> {
     const params = ctx.message!.text!.split(' ');

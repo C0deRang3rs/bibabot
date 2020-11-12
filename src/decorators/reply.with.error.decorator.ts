@@ -7,9 +7,11 @@ const ReplyWithError = () => (_target: object, _propKey: string, desc: PropertyD
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
-  desc.value = async function wrapped(...args: [TelegrafContext, Function | undefined]): Promise<void> {
+  desc.value = async function wrapped(...args: [TelegrafContext, Function | undefined]): Promise<object> {
+    let result;
+
     try {
-      await method.apply(this, args);
+      result = await method.apply(this, args);
     } catch (err) {
       if (err instanceof RepliableError) {
         await GlobalHelper.sendError(args[0], err.message);
@@ -20,6 +22,8 @@ const ReplyWithError = () => (_target: object, _propKey: string, desc: PropertyD
         args[1]();
       }
     }
+
+    return result;
   };
 };
 
