@@ -8,6 +8,7 @@ import { ConfigAction, ConfigProperty, getPropertyDescription } from '../types/s
 import ConfigRepository from '../repositories/config.repo';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
+import { BotMessage } from '../types/globals/message.types';
 
 export default class ConfigService extends BaseService {
   private static instance: ConfigService;
@@ -29,7 +30,7 @@ export default class ConfigService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteLastMessage('config')
+  @DeleteLastMessage(BotMessage.CONFIG)
   private async configMenu(ctx: TelegrafContext): Promise<Message> {
     return ctx.reply(
       'Опции бота для данного чата:',

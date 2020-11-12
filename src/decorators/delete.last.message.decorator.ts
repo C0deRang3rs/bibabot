@@ -3,13 +3,12 @@ import { Message } from 'telegraf/typings/telegram-types';
 import Bot from '../core/bot';
 import LastMessageRepository from '../repositories/last.message.repo';
 
-const lastMessageRepo = new LastMessageRepository();
-
 const DeleteLastMessage = (prefix: string) => (_target: object, _propKey: string, desc: PropertyDescriptor): void => {
+  const lastMessageRepo = new LastMessageRepository();
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
-  desc.value = async function wrapped(...args: TelegrafContext[]): Promise<void> {
+  desc.value = async function wrapped(...args: [TelegrafContext]): Promise<object> {
     const message: Message = await method.apply(this, args);
     const chatId = message.chat!.id;
     const lastMessage = await lastMessageRepo.getLastMessage(prefix, chatId);
@@ -23,6 +22,8 @@ const DeleteLastMessage = (prefix: string) => (_target: object, _propKey: string
     }
 
     await lastMessageRepo.setLastMessage(prefix, chatId, message.message_id);
+
+    return message;
   };
 };
 

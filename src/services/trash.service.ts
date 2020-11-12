@@ -8,11 +8,12 @@ import { FUCK_TRIGGERS, CoinSide } from '../types/services/trash.service.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
-import { getUsernameFromContext } from '../utils/global.util';
 import { ConfigProperty } from '../types/services/config.service.types';
 import CheckConfig from '../decorators/check.config.decorator';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import RepliableError from '../types/globals/repliable.error';
+import { BotMessage } from '../types/globals/message.types';
+import { getUsernameFromContext } from '../utils/data.utils';
 
 export default class TrashService extends BaseService {
   private static instance: TrashService;
@@ -92,7 +93,7 @@ export default class TrashService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteLastMessage('flip_stat')
+  @DeleteLastMessage(BotMessage.FLIP_STAT)
   private async coinFlipStat(ctx: TelegrafContext): Promise<Message> {
     const tailsCount = await this.statRepo.getStatCount(CoinSide.TAILS);
     const headsCount = await this.statRepo.getStatCount(CoinSide.HEADS);

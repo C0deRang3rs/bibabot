@@ -5,7 +5,7 @@ const CheckMessageContent = (type: MessageContent) => (_target: object, _propKey
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
-  desc.value = async function wrapped(...args: [TelegrafContext, Function | undefined]): Promise<void | Function> {
+  desc.value = async function wrapped(...args: [TelegrafContext, Function | undefined]): Promise<object> {
     let isAllowed;
     const ctx = args[0];
 
@@ -19,10 +19,10 @@ const CheckMessageContent = (type: MessageContent) => (_target: object, _propKey
         args[1]!();
       }
 
-      return;
+      return {};
     }
 
-    await method.apply(this, args);
+    return method.apply(this, args);
   };
 };
 

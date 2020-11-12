@@ -16,8 +16,9 @@ import { ShopCommand } from '../types/globals/commands.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
-import UpdateBibaTable from '../decorators/update.biba.table.decorator';
+import UpdateLastMessage from '../decorators/update.last.message.decorator';
 import * as shopUtils from '../utils/shop.util';
+import { BotMessage } from '../types/globals/message.types';
 
 export default class ShopService extends BaseService {
   private static instance: ShopService;
@@ -43,7 +44,7 @@ export default class ShopService extends BaseService {
   }
 
   @DeleteRequestMessage()
-  @DeleteLastMessage('shop')
+  @DeleteLastMessage(BotMessage.SHOP)
   private static async sendProductsList(ctx: TelegrafContext): Promise<Message> {
     const list = shopUtils.getProductsList();
 
@@ -59,7 +60,7 @@ export default class ShopService extends BaseService {
     );
   }
 
-  @UpdateBibaTable()
+  @UpdateLastMessage(BotMessage.BIBA_TABLE)
   private async buyOneCM(ctx: TelegrafContext): Promise<void> {
     try {
       const price = shopUtils.getProductPrice(Product.BIBA_CM);

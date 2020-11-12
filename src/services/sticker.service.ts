@@ -1,7 +1,9 @@
+/* eslint-disable spaced-comment */
 import { Message, User } from 'telegraf/typings/telegram-types';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
 import axios from 'axios';
+import gm from 'gm';
 import { TelegrafContext } from 'telegraf/typings/context';
 import BaseService from './base.service';
 import { BotCommandType, TelegramError } from '../types/core/bot.types';
@@ -13,10 +15,18 @@ import OnlyReply from '../decorators/only.reply.decorator';
 import OnlyMention from '../decorators/only.mention.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
-import { MAX_TEXT_LENGTH, STATUS_CREATOR, StickerSet } from '../types/services/sticker.service.types';
+import {
+  MAX_TEXT_LENGTH, NameColor, STATUS_CREATOR, StickerSet,
+} from '../types/services/sticker.service.types';
+import DeleteLastMessage from '../decorators/delete.last.message.decorator';
+import UpdateLastMessage from '../decorators/update.last.message.decorator';
+import { BotMessage } from '../types/globals/message.types';
+import { getUpdatedMessage } from '../utils/lists.util';
 
 export default class StickerService extends BaseService {
   private static instance: StickerService;
+
+  private avatarMap = new Map<number, Buffer>();
 
   private constructor(
     private stickerSetRepo: StickerSetRepository,
@@ -34,9 +44,27 @@ export default class StickerService extends BaseService {
     return StickerService.instance;
   }
 
+  private static getNameColor(messageAuthor: User): string {
+    const userId = messageAuthor.id;
+    const nameColors = [
+      NameColor.LIGHT_RED,
+      NameColor.GREEN,
+      NameColor.YELLOW,
+      NameColor.LIGHT_BLUE,
+      NameColor.PURPLE,
+      NameColor.PINK,
+      NameColor.LIGHT_GREEN,
+      NameColor.ORANGE,
+      NameColor.RED,
+    ];
+
+    const nameMap = [0, 7, 4, 1, 6, 3, 5];
+    const nameIndex = Math.abs(userId) % 7;
+    return nameColors[nameMap[nameIndex]];
+  }
+
   private static async createImage(text: string, messageAuthor: User, time: string): Promise<void> {
-    const colorSet = ['#58A5E6', '#F0948B', '#3E82C7', '#8263CE', '#EA6759', '#EA7F34'];
-    const color = colorSet[Math.floor(Math.random() * colorSet.length)];
+    const color = StickerService.getNameColor(messageAuthor);
     const htmlTemplateResponse = await axios.get(`http://127.0.0.1:${process.env.PORT}/img`, {
       data: {
         text,
@@ -54,17 +82,26 @@ export default class StickerService extends BaseService {
 
     const message = await page.$('#message');
     await message!.screenshot({
-      path: 'example.png',
+      path: 'test.png',
       omitBackground: true,
     });
-
     await browser.close();
+    return new Promise((resolve, reject) => {
+      gm('test.png').resize(512, 512).write('example.png', (err) => {
+        if (err) {
+          reject(err);
+        }
+
+        resolve();
+      });
+    });
   }
 
-  @DeleteRequestMessage()
   @ReplyWithError()
   @OnlyMention(false)
   @OnlyReply(false)
+  @DeleteRequestMessage()
+  @UpdateLastMessage(BotMessage.STICKER_LIST)
   public async handleStickerCreation(ctx: TelegrafContext, next: Function | undefined): Promise<void> {
     const reply = ctx.message!.reply_to_message!;
     const text = reply.text!;
@@ -85,6 +122,7 @@ export default class StickerService extends BaseService {
     const time = `${`0${date.getUTCHours()}`.slice(-2)}:${`0${date.getUTCMinutes()}`.slice(-2)}`;
 
     await StickerService.createImage(text, messageAuthor, time);
+
     const imageStream = fs.readFileSync(`${__dirname}/../../example.png`);
 
     const owner = (await this.bot.app.telegram.getChatAdministrators(chatId)).find((usr) => usr.status === STATUS_CREATOR)?.user;
@@ -176,9 +214,10 @@ export default class StickerService extends BaseService {
   }
 
   @ReplyWithError()
-  @DeleteRequestMessage()
   @OnlyReply()
+  @DeleteRequestMessage()
   @DeleteResponseMessage(5000)
+  @UpdateLastMessage(BotMessage.STICKER_LIST)
   private async removeStickerFromPack(ctx: TelegrafContext): Promise<Message> {
     const reply = ctx.message!.reply_to_message!;
 
@@ -187,8 +226,22 @@ export default class StickerService extends BaseService {
     }
 
     try {
-      await this.bot.app.telegram.deleteStickerFromSet(reply.sticker!.file_id);
+      const botStickerSet = await this.stickerSetRepo.getStickerSet(ctx.chat!.id!);
+
+      if (!botStickerSet) {
+        throw new RepliableError('Для этого чата пока нет стикер сета', ctx);
+      }
+
+      if (!botStickerSet.names.includes(reply.sticker.set_name!)) {
+        throw new RepliableError('Этот стикер не принадлежит этому чату', ctx);
+      }
+
+      await this.bot.app.telegram.deleteStickerFromSet(reply.sticker.file_id);
     } catch (err) {
+      if (err instanceof RepliableError) {
+        throw err;
+      }
+
       throw new RepliableError('Стикер не удалён. Либо он не принадлежит боту, либо он был удалён ранее', ctx);
     }
 
@@ -197,12 +250,24 @@ export default class StickerService extends BaseService {
     return ctx.reply('Стикер удалён');
   }
 
+  @DeleteRequestMessage()
+  @DeleteLastMessage(BotMessage.STICKER_LIST)
+  private static async sendStickerList(ctx: TelegrafContext): Promise<Message> {
+    const { text, extra } = await getUpdatedMessage(BotMessage.STICKER_LIST, ctx.chat!.id!);
+    return ctx.reply(text, extra);
+  }
+
   protected initListeners(): void {
     this.bot.addListeners([
       {
         type: BotCommandType.COMMAND,
         name: StickerCommand.REMOVE_STICKER,
         callback: (ctx): Promise<Message> => this.removeStickerFromPack(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: StickerCommand.STICKERS,
+        callback: (ctx): Promise<Message> => StickerService.sendStickerList(ctx),
       },
     ]);
   }

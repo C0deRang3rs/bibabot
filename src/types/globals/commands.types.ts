@@ -45,4 +45,5 @@ export enum GlobalCommand {
 
 export enum StickerCommand {
   REMOVE_STICKER = 'remove_sticker',
+  STICKERS = 'stickers',
 }
