@@ -9,8 +9,12 @@ const DeleteRequestMessage = () => (_target: object, _propKey: string, desc: Pro
     const botId = (await Bot.getInstance().app.telegram.getMe()).id;
     const botUser = await Bot.getInstance().app.telegram.getChatMember(args[0].chat!.id, botId);
 
-    if (botUser.can_delete_messages) {
-      await args[0].deleteMessage();
+    if (botUser.can_delete_messages && args[0].message) {
+      try {
+        await args[0].deleteMessage();
+      } catch (err) {
+        Bot.handleError(new Error(`Can't delete last message for chat ${args[0].chat!.id}`));
+      }
     }
 
     return method.apply(this, args);
