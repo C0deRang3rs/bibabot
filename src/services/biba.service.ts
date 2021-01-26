@@ -23,6 +23,7 @@ import {
   BibacoinActivity,
   DAILY_BIBACOINT_INCOME_PERCENT,
   MAX_DAILY_BIBACOINT_INCOME,
+  NO_BIBA_TO_BUY,
 } from '../types/services/bibacoin.service.types';
 import { getUpdatedMessage } from '../utils/lists.util';
 import UpdateLastMessage from '../decorators/update.last.message.decorator';
@@ -87,6 +88,11 @@ export default class BibaService extends BaseService {
     return `${message}\n\n`
          + `Также все участники чата получили свой дневной прирост бибакоинов в ${DAILY_BIBACOINT_INCOME_PERCENT}%. `
          + `Но не больше ${MAX_DAILY_BIBACOINT_INCOME}`;
+  }
+
+  @DeleteResponseMessage(5000)
+  public async rerollBiba(ctx: TelegrafContext): Promise<Message> {
+    return this.bibaMetr(ctx, true);
   }
 
   @UpdateLastMessage(BotMessage.BIBA_TABLE)
@@ -174,6 +180,40 @@ export default class BibaService extends BaseService {
   private static async bibaTable(ctx: TelegrafContext): Promise<Message> {
     const { text, extra } = await getUpdatedMessage(BotMessage.BIBA_TABLE, ctx.chat!.id);
     return ctx.reply(text, extra);
+  }
+
+  @UpdateLastMessage(BotMessage.BIBA_TABLE)
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(5000)
+  @ReplyWithError()
+  private async buyBiba(ctx: TelegrafContext): Promise<Message> {
+    const price = shopUtils.getProductPrice(Product.BIBA_CM);
+    const count = parseInt(ctx.message!.text!.split(' ')[1], 10);
+    const totalPrice = price * count;
+    const chatId = ctx.chat!.id;
+    const userId = ctx.from!.id;
+    const username = getUsernameFromContext(ctx);
+
+    if (!count) throw new RepliableError('Неправильный формат', ctx);
+    if (count <= 0) throw new RepliableError(`${username} ты не можешь купить меньше 1 см`, ctx);
+
+    await this.bibacoinService.hasEnoughCredits(userId, chatId, totalPrice);
+
+    const currentBiba = await this.bibaRepo.getBibaByIds(chatId, userId);
+
+    if (!currentBiba) {
+      throw new RepliableError(NO_BIBA_TO_BUY, ctx);
+    }
+
+    if (currentBiba.outdated) {
+      throw new RepliableError('Биба уже пованивает, обнови её с помощью /biba', ctx);
+    }
+
+    await this.bibaRepo.setBiba(chatId, { ...currentBiba, size: currentBiba.size + count });
+
+    await this.bibacoinService.withdrawCoins(userId, chatId, totalPrice);
+
+    return ctx.reply(`${username} купил ${count} см для своей бибы`);
   }
 
   @UpdateLastMessage(BotMessage.BIBA_TABLE)
@@ -294,6 +334,11 @@ export default class BibaService extends BaseService {
         type: BotCommandType.COMMAND,
         name: BibaCommand.SELL_BIBA,
         callback: (ctx): Promise<Message> => this.sellBiba(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: BibaCommand.BUY_BIBA,
+        callback: (ctx): Promise<Message> => this.buyBiba(ctx),
       },
     ];
 

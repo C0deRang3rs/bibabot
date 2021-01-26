@@ -129,7 +129,7 @@ export default class ShopService extends BaseService {
         return;
       }
 
-      await this.bibaService.bibaMetr(ctx, true);
+      await this.bibaService.rerollBiba(ctx);
 
       await this.bibacoinService.withdrawCoins(userId, chatId, price);
       await ctx.answerCbQuery('Реролл куплен!');
