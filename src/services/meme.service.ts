@@ -12,7 +12,6 @@ import CheckMessageContent from '../decorators/check.message.content.decorator';
 import { MessageContent } from '../types/globals/message.types';
 import * as shopUtils from '../utils/shop.util';
 import moment from 'moment';
-import { CommandCategory } from '../types/globals/commands.types';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import RepliableError from '../types/globals/repliable.error';
 
@@ -28,7 +27,6 @@ export default class MemeService extends BaseService {
     private readonly bibacoinService: BibacoinService,
   ) {
     super();
-    this.migrate();
   }
 
   public static getInstance(): MemeService {
@@ -148,19 +146,6 @@ export default class MemeService extends BaseService {
     }
 
     done();
-  }
-
-  public async migrate(): Promise<void> {
-    const result = await this.memeRepo.getAllMemes();
-
-    Object.entries(result).forEach(([key, meme]) => {
-      result[key] = {
-        ...meme,
-        createdAt: meme.createdAt || new Date(),
-      };
-    });
-
-    await this.memeRepo.batchUpdate(result);
   }
 
   private async updateStatMessage(chatId: number, messageId: number): Promise<void> {
