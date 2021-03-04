@@ -1,17 +1,14 @@
-import { TelegrafContext } from 'telegraf/typings/context';
+import { Context } from 'telegraf/typings/context';
 import Bull from 'bull';
-import { Message } from 'telegraf/typings/telegram-types';
 import GenerateNameUtil from '../utils/generate-name.util';
 import { ChangeTitleCommandType } from '../types/globals/commands.types';
 import Bot from '../core/bot';
-import { BotCommandType } from '../types/core/bot.types';
+import { BotCommandType, BotListener } from '../types/core/bot.types';
 import TimerRepository from '../repositories/timer.repo';
 import BaseService from './base.service';
-import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
-import DeleteResponseMessage from '../decorators/delete.response.message.decorator';
 import { ConfigProperty } from '../types/services/config.service.types';
 import CheckConfig from '../decorators/check.config.decorator';
-import { TimerUnit, TimerUnitName } from '../types/services/change-title.service.types';
+import { TimerUnit } from '../types/services/change-title.service.types';
 
 export default class ChangeTitleService extends BaseService {
   protected static instance: ChangeTitleService;
@@ -48,37 +45,6 @@ export default class ChangeTitleService extends BaseService {
     return ChangeTitleService.instance;
   }
 
-  @DeleteRequestMessage()
-  @DeleteResponseMessage(5000)
-  public async onIterationChange(ctx: TelegrafContext): Promise<Message> {
-    const commandData = ctx.message!.text!.split(' ');
-
-    switch (commandData[2]) {
-      case TimerUnitName.HOURS:
-        this.iterationUnits = TimerUnit.HOURS;
-        break;
-      case TimerUnitName.MINUTES:
-        this.iterationUnits = TimerUnit.MINUTES;
-        break;
-      default: return ctx.reply('Wrong time format, try something like: 2 hours, 5 minutes, 1 hours (lmao)');
-    }
-
-    const newIterationTime = parseInt(commandData[1], 10);
-
-    if (!new RegExp(/^\d+$/).test(commandData[1]) || newIterationTime <= 0) {
-      return ctx.reply('Время может содержать только числа больше 1');
-    }
-
-    if (commandData[1].length > 3) {
-      return ctx.reply('Время не может быть больше 999');
-    }
-
-    this.iterationTime = newIterationTime;
-
-    console.log(`[${ctx.chat!.id}] Interval - ${this.iterationTime}, units - ${this.iterationUnits}`);
-    return ctx.reply('Iteration interval changed');
-  }
-
   @CheckConfig(ConfigProperty.RENAME)
   private async changeTitle(id: number, auto: boolean): Promise<void> {
     const newName = await GenerateNameUtil.generateName();
@@ -104,25 +70,21 @@ export default class ChangeTitleService extends BaseService {
     done();
   }
 
-  public async onRename(ctx: TelegrafContext): Promise<void> {
+  public async onRename(ctx: Context): Promise<void> {
     if (!ctx.chat) return;
 
     await this.changeTitle(ctx.chat.id, false);
   }
 
-  protected initListeners(): void {
-    this.bot.addListeners([
+  protected initListeners(): BotListener[] {
+    return [
       {
         type: BotCommandType.COMMAND,
         name: ChangeTitleCommandType.RENAME,
+        description: 'Переименовать конфу',
         callback: (ctx): Promise<void> => this.onRename(ctx),
       },
-      {
-        type: BotCommandType.COMMAND,
-        name: ChangeTitleCommandType.ITERATION_CHANGE,
-        callback: (ctx): Promise<Message> => this.onIterationChange(ctx),
-      },
-    ]);
+    ];
   }
 
   private isRenameNeeded(timer: string): boolean {

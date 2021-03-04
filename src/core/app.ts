@@ -1,3 +1,4 @@
+import moment from 'moment';
 import GlobalService from '../services/global.service';
 import Redis from './redis';
 import Bot from './bot';
@@ -5,14 +6,16 @@ import Server from './server';
 import Queue from './queue';
 import { AppServices } from '../types/core/app.types';
 
+moment.locale('RU');
 export default class App {
-  constructor(private services: AppServices[]) {}
+  constructor(public services: AppServices[]) {}
 
   private static startCore(): void {
     Redis.getInstance();
     new Server();
     new Queue('auto:rename');
     new Queue('daily:checks');
+    new Queue('nightly:checks');
   }
 
   private static startPostHandlers(): void {

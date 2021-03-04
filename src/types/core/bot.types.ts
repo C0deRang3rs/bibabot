@@ -1,9 +1,10 @@
-import { MessageSubTypes } from 'telegraf/typings/telegram-types';
-import Telegraf, { Telegram } from 'telegraf';
-import { TelegrafContext } from 'telegraf/typings/context';
+import { Context } from 'telegraf';
+import { MessageSubType } from 'telegraf/typings/telegram-types';
+import { BotAction, BotCommand, CommandCategory } from '../globals/commands.types';
 
 export enum BotEvent {
   MESSAGE = 'message',
+  POLL = 'poll',
 }
 
 export enum BotCommandType {
@@ -14,89 +15,10 @@ export enum BotCommandType {
 
 export interface BotListener {
   type: BotCommandType;
-  name: MessageSubTypes | string;
-  callback(ctx: TelegrafContext): Promise<void | object>;
-}
-
-// @ts-ignore
-export interface TelegramFull extends Telegram {
-  getUserProfilePhotos(id: number, offset?: number, limit?: number): Promise<PictureResponse>;
-  setChatStickerSet(chatId: number | string, setName: string): Promise<true>;
-  deleteChatStickerSet(chatId: number | string): Promise<true>;
-  createNewStickerSet(ownerId: number, name: string, title: string, stickerData: ExtraCreateNewStickerSet): Promise<true>;
-  addStickerToSet(ownerId: number, name: string, stickerData: ExtraCreateNewStickerSet, isMask: boolean): Promise<true>;
-}
-
-export interface PictureResponse {
-  total_count: number;
-  photos: Array<Photo[]>;
-}
-
-export interface Photo {
-  file_id: string;
-  file_unique_id: string;
-  width: number;
-  height: number;
-  file_size?: number;
-}
-
-export interface File {
-  file_id: string;
-  file_unique_id: string;
-  file_size: number;
-  file_path: string;
-}
-
-// @ts-ignore
-export interface TelegrafFull extends Telegraf<TelegrafContext> {
-  telegram: TelegramFull;
-}
-
-export interface ExtraCreateNewStickerSet {
-  png_sticker?: InputFile;
-  tgs_sticker?: InputFile;
-  emojis: string;
-  contains_masks?: boolean;
-  mask_position?: MaskPosition;
-}
-
-export type InputFile =
-  | FileId
-  | InputFileByPath
-  | InputFileByReadableStream
-  | InputFileByBuffer
-  | InputFileByURL;
-
-export type FileId = string;
-
-export interface InputFileByPath {
-  source: string;
-}
-
-export interface InputFileByReadableStream {
-  source: NodeJS.ReadableStream;
-}
-
-export interface InputFileByBuffer {
-  source: Buffer;
-}
-
-export interface InputFileByURL {
-  url: string;
-  filename: string;
-}
-
-export interface MaskPosition {
-  /** The part of the face relative to which the mask should be placed. One of “forehead”, “eyes”, “mouth”, or “chin”. */
-  point: 'forehead' | 'eyes' | 'mouth' | 'chin';
-  /** Shift by X-axis measured in widths of the mask scaled to the face size, from left to right.
-   *  For example, choosing -1.0 will place mask just to the left of the default mask position. */
-  x_shift: number;
-  /** Shift by Y-axis measured in heights of the mask scaled to the face size, from top to bottom.
-   * For example, 1.0 will place the mask just below the default mask position. */
-  y_shift: number;
-  /** Mask scaling coefficient. For example, 2.0 means double size. */
-  scale: number;
+  name: MessageSubType | BotCommand | BotAction;
+  description?: string;
+  category?: CommandCategory;
+  callback(ctx: Context): Promise<void | object>;
 }
 
 export enum TelegramError {
@@ -104,4 +26,43 @@ export enum TelegramError {
   STICKERSET_INVALID = 'Bad Request: STICKERSET_INVALID',
   USER_IS_BOT = 'Bad Request: USER_IS_BOT',
   PEER_ID_INVALID = 'Bad Request: PEER_ID_INVALID',
+  CANT_REMOVE_CHAT_OWNER = 'Bad Request: can\'t remove chat owner',
+  CHAT_ADMIN_REQUIRED = 'Bad Request: CHAT_ADMIN_REQUIRED',
 }
+
+export enum CommandType {
+  USER_MENTION = 'USER_MENTION',
+  NUMBER = 'NUMBER',
+  ANY_CHARS = 'ANY_CHARS',
+  COMMAND = 'COMMAND',
+  RANGE = 'RANGE',
+}
+
+export type CommandArguments = { 0: CommandType.COMMAND } & Array<CommandType>;
+
+export enum CommandRegex {
+  NUMBER = '^[0-9]+',
+  ANY_CHARS = '.+',
+  USER_MENTION = '^\\@[\\d\\w]+',
+  RANGE = '^\\d+-\\d+$',
+  COMMAND = '',
+}
+
+export enum CommandExample {
+  USER_MENTION = '@user_mention',
+  NUMBER = '123',
+  STRING = 'строка',
+  ANY_CHARS = 'текст',
+  RANGE = 'min-max',
+  COMMAND = '/command',
+}
+
+export const getRegexByCommandType = (type: CommandType): string => CommandRegex[type];
+export const getExampleByCommandType = (type: CommandType, command?: string): string => {
+  if (type === CommandType.COMMAND) return command || CommandExample.COMMAND;
+
+  const isOptional = type.includes('?');
+  const trueType = type.replace('?', '') as CommandType;
+
+  return isOptional ? `[${CommandExample[trueType]}]` : CommandExample[trueType];
+};

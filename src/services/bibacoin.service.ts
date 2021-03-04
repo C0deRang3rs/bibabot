@@ -1,4 +1,4 @@
-import { TelegrafContext } from 'telegraf/typings/context';
+import { Context } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
 import {
   ZERO_BALANCE,
@@ -7,8 +7,8 @@ import {
   DAILY_BIBACOINT_INCOME_PERCENT,
   MAX_DAILY_BIBACOINT_INCOME,
 } from '../types/services/bibacoin.service.types';
-import { BibacoinCommand, BibacoinDebugCommand } from '../types/globals/commands.types';
-import { BotListener, BotCommandType } from '../types/core/bot.types';
+import { BibacoinCommand, BibacoinDebugCommand, CommandCategory } from '../types/globals/commands.types';
+import { BotListener, BotCommandType, CommandType } from '../types/core/bot.types';
 import BibacoinRepository from '../repositories/bibacoin.repo';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
@@ -18,6 +18,7 @@ import * as shopUtils from '../utils/shop.util';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import RepliableError from '../types/globals/repliable.error';
 import { BotMessage } from '../types/globals/message.types';
+import CommandTemplate from '../decorators/command.template.decorator';
 
 export default class BibacoinService extends BaseService {
   private static instance: BibacoinService;
@@ -42,7 +43,7 @@ export default class BibacoinService extends BaseService {
 
   @DeleteRequestMessage()
   @DeleteLastMessage(BotMessage.INCOME)
-  private static async sendIncomeList(ctx: TelegrafContext): Promise<Message> {
+  private static async sendIncomeList(ctx: Context): Promise<Message> {
     const list = shopUtils.getActivitiesList();
 
     return ctx.reply(list.map((activity) => `${shopUtils.getActivityContext(activity)}`).join('\n'));
@@ -50,10 +51,20 @@ export default class BibacoinService extends BaseService {
 
   @DeleteRequestMessage()
   @ReplyWithError()
-  private async giveCoins(ctx: TelegrafContext): Promise<Message> {
-    const params = ctx.message!.text!.split(' ');
-    const chatId = ctx.chat!.id;
-    const fromUserId = ctx.from!.id;
+  @CommandTemplate([CommandType.COMMAND, CommandType.USER_MENTION, CommandType.NUMBER])
+  private async giveCoins(ctx: Context): Promise<Message> {
+    if (
+      !ctx.from
+      || !ctx.chat
+      || !ctx.message
+      || !('text' in ctx.message)
+    ) {
+      throw new Error('Wrong context');
+    }
+
+    const params = ctx.message.text.split(' ');
+    const chatId = ctx.chat.id;
+    const fromUserId = ctx.from.id;
     const username = params[1];
     const count = parseFloat(params[2]);
     if (!username || count === undefined || Number.isNaN(count)) throw new RepliableError('Wrong format', ctx);
@@ -82,7 +93,7 @@ export default class BibacoinService extends BaseService {
     return ctx.reply(`${toUser.username} получил ${count} бибакоинов от ${fromUser.username}. Не забудь сказать спасибо`);
   }
 
-  public async addMessageCoins(ctx: TelegrafContext, next: Function | undefined): Promise<Function> {
+  public async addMessageCoins(ctx: Context, next: Function | undefined): Promise<Function> {
     if (!ctx.message) return next!();
 
     const chatId = ctx.chat!.id;
@@ -137,16 +148,22 @@ export default class BibacoinService extends BaseService {
     return newBalance;
   }
 
-  protected initListeners(): void {
+  protected initProps(): void {
+    this.categoryName = CommandCategory.COIN;
+  }
+
+  protected initListeners(): BotListener[] {
     const commands: BotListener[] = [
       {
         type: BotCommandType.COMMAND,
         name: BibacoinCommand.INCOME_LIST,
+        description: 'Список источников дохода',
         callback: (ctx): Promise<Message> => BibacoinService.sendIncomeList(ctx),
       },
       {
         type: BotCommandType.COMMAND,
         name: BibacoinCommand.GIVE,
+        description: 'Передача бибакоинов',
         callback: (ctx): Promise<Message> => this.giveCoins(ctx),
       },
       {
@@ -162,23 +179,33 @@ export default class BibacoinService extends BaseService {
       );
     }
 
-    this.bot.addListeners(commands);
+    return commands;
   }
 
-  private async setBalance(ctx: TelegrafContext): Promise<Message> {
-    const balance = ctx.message!.text!.split(BibacoinDebugCommand.SET_BALANCE)[1].trim();
+  private async setBalance(ctx: Context): Promise<Message> {
+    if (
+      !ctx.chat
+      || !ctx.message
+      || !('text' in ctx.message)
+    ) {
+      throw new Error('Wrong context');
+    }
+
+    const balance = ctx.message.text.split(BibacoinDebugCommand.SET_BALANCE)[1].trim();
 
     if (!balance) {
       return ctx.reply('Укажи сколько надо');
     }
 
-    await this.bibacoinRepo.setBibacoinBalance(ctx.chat!.id, ctx.message!.from!.id, balance);
+    await this.bibacoinRepo.setBibacoinBalance(ctx.chat.id, ctx.message.from.id, balance);
     return ctx.reply('Done');
   }
 
-  private async getBalance(ctx: TelegrafContext): Promise<void> {
+  private async getBalance(ctx: Context): Promise<void> {
     const balance = await this.bibacoinRepo.getBibacoinBalanceByIds(ctx.chat!.id, ctx.from!.id);
     const message = balance ? `У тебя на счету ${balance} бибакоинов` : ZERO_BALANCE;
-    await ctx.answerCbQuery(message, true);
+    await ctx.answerCbQuery(message, {
+      show_alert: true,
+    });
   }
 }

@@ -1,7 +1,7 @@
-import { TelegrafContext } from 'telegraf/typings/context';
+import { Context } from 'telegraf/typings/context';
 
 export default class RepliableError extends Error {
-  constructor(message: string, public ctx: TelegrafContext) {
+  constructor(message: string, public ctx: Context) {
     super(message);
   }
 }

@@ -1,13 +1,16 @@
-import Telegraf from 'telegraf';
-import { TelegrafContext } from 'telegraf/typings/context';
-import { MessageSubTypes } from 'telegraf/typings/telegram-types';
-import { BotListener, BotEvent, TelegrafFull } from '../types/core/bot.types';
+import { Telegraf } from 'telegraf';
+import { Context } from 'telegraf/typings/context';
+import { MessageSubType } from 'telegraf/typings/telegram-types';
+import { BotListener, BotEvent } from '../types/core/bot.types';
+import { CommandCategory, CommandInfo } from '../types/globals/commands.types';
 import { getUsernameFromContext } from '../utils/data.utils';
 
 export default class Bot {
   private static instance: Bot;
 
-  public app!: TelegrafFull;
+  public descMap = new Map<string, CommandInfo>();
+
+  public app!: Telegraf;
 
   private listeners: Array<BotListener> = [];
 
@@ -25,18 +28,26 @@ export default class Bot {
     return Bot.instance;
   }
 
-  public static handleError(err: Error): void {
+  public static handleError(err: unknown): void {
     console.error(err);
   }
 
-  public static logger(ctx: TelegrafContext, next?: Function, commandName?: string): void {
-    const chat = ctx.chat!;
+  public static logger(ctx: Context, next: Function, commandName?: string): void {
+    if (!ctx.chat) {
+      return;
+    }
 
+    const { chat } = ctx;
     const username = getUsernameFromContext(ctx);
-    const message = (ctx.message && ctx.message!.text) || ctx.match;
+    const messageText = ctx.message && 'text' in ctx.message
+      ? ctx.message.text
+      : 'callback_query' in ctx.update
+        ? 'data' in ctx.update.callback_query
+          ? ctx.update.callback_query.data
+          : '' : '';
 
     if (commandName !== BotEvent.MESSAGE) {
-      console.log(`[${chat.id}] ${chat.title || 'Personal message'} from user ${username} - ${message}`);
+      console.log(`[${chat.id}] ${'title' in chat ? chat.title : 'Personal message'} from user ${username} - ${messageText}`);
     }
 
     next!();
@@ -47,15 +58,24 @@ export default class Bot {
   }
 
   public applyListeners(): void {
-    this.listeners.forEach((listener) => this.app[listener.type](
-      listener.name as MessageSubTypes,
-      (ctx, next) => Bot.logger(ctx, next as Function, listener.name),
-      listener.callback,
-    ));
+    this.listeners.forEach((listener) => {
+      if (listener.description) {
+        this.descMap.set(listener.name, {
+          description: listener.description,
+          category: listener.category || CommandCategory.OTHER,
+        });
+      }
+
+      this.app[listener.type](
+        listener.name as MessageSubType,
+        (ctx: Context, next: Function) => Bot.logger(ctx, next, listener.name),
+        listener.callback,
+      );
+    });
   }
 
   private initMain(): void {
-    this.app = new Telegraf(process.env.BOT_TOKEN as string) as unknown as TelegrafFull;
+    this.app = new Telegraf(process.env.BOT_TOKEN as string);
   }
 
   private async startPooling(): Promise<void> {

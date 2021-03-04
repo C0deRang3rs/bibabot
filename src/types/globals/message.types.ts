@@ -1,4 +1,4 @@
-import { ExtraEditMessage } from 'telegraf/typings/telegram-types';
+import { ExtraEditMessageText } from 'telegraf/typings/telegram-types';
 
 export enum MessageContent {
   PHOTO = 'PHOTO',
@@ -11,9 +11,10 @@ export enum BotMessage {
   CONFIG = 'config',
   SHOP = 'shop',
   FLIP_STAT = 'flip_stat',
+  HELP = 'help',
 }
 
 export interface UpdateMessageResponse {
   text: string;
-  extra?: ExtraEditMessage;
+  extra?: ExtraEditMessageText;
 }

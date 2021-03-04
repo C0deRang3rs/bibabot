@@ -8,6 +8,9 @@ import MemeService from './services/meme.service';
 import ConfigService from './services/config.service';
 import App from './core/app';
 import StickerService from './services/sticker.service';
+import JailService from './services/jail.service';
+import LabelService from './services/label.service';
+import HelpService from './services/help.service';
 
 const app = new App([
   ChangeTitleService,
@@ -19,6 +22,9 @@ const app = new App([
   MemeService,
   ConfigService,
   StickerService,
+  JailService,
+  LabelService,
+  HelpService,
 ]);
 
 app.start();

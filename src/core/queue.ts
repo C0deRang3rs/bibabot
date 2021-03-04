@@ -1,6 +1,7 @@
 import Bull from 'bull';
 import ChangeTitleService from '../services/change-title.service';
 import BibaService from '../services/biba.service';
+import MemeService from '../services/meme.service';
 
 export default class Queue {
   private queue!: Bull.Queue;
@@ -24,6 +25,11 @@ export default class Queue {
       case 'daily:checks': {
         this.queue.process(async (job, done) => BibaService.getInstance().dailyBiba(done));
         await this.queue.add({}, { repeat: { cron: '0 10 * * *' }, removeOnComplete: true });
+        break;
+      }
+      case 'nightly:checks': {
+        this.queue.process(async (job, done) => MemeService.getInstance().cleanOldMemes(done));
+        await this.queue.add({}, { repeat: { cron: '0 0 * * *' }, removeOnComplete: true });
         break;
       }
       default: break;
