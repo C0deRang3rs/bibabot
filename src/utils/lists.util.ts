@@ -3,7 +3,6 @@ import BibaRepository from '../repositories/biba.repo';
 import StickerSetRepository from '../repositories/sticker.repo';
 import { BotMessage, UpdateMessageResponse } from '../types/globals/message.types';
 import { NO_BIBA_TABLE_DATA, NO_STICKER_LIST_DATA } from '../types/services/biba.service.types';
-import { getUsernameFromUser } from './data.utils';
 
 const getBibaTableText = async (chatId: number): Promise<UpdateMessageResponse> => {
   const bibaRepo = new BibaRepository();
@@ -31,16 +30,13 @@ const getStickerListUpdate = async (chatId: number): Promise<UpdateMessageRespon
   // eslint-disable-next-line no-restricted-syntax
   for await (const set of sets) {
     const setFromTG = await Bot.getInstance().app.telegram.getStickerSet(set);
-    const chatMember = await Bot.getInstance().app.telegram.getChatMember(chatId, stickerSet?.ownerId!);
     const index = sets.indexOf(set) + 1;
-    // eslint-disable-next-line max-len
-    message.push(`<a href="https://t.me/addstickers/${set}">Пак ${index}</a> - ${setFromTG.stickers.length} стикеров, создатель: ${getUsernameFromUser(chatMember.user).replace('@', '')}`);
+    message.push(`<a href="https://t.me/addstickers/${set}">Пак ${index}</a> - ${setFromTG.stickers.length} стикеров`);
   }
 
   return { text: message.join('\n'), extra: { parse_mode: 'HTML' } };
 };
 
-// eslint-disable-next-line import/prefer-default-export
 export const getUpdatedMessage = async (prefix: string, chatId: number): Promise<UpdateMessageResponse> => {
   switch (prefix) {
     case BotMessage.BIBA_TABLE: return getBibaTableText(chatId);

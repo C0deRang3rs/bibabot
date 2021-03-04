@@ -1,7 +1,7 @@
 import { Markup } from 'telegraf';
-import { TelegrafContext } from 'telegraf/typings/context';
+import { Context } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
-import { BotCommandType } from '../types/core/bot.types';
+import { BotCommandType, BotListener } from '../types/core/bot.types';
 import {
   NO_BIBA_TO_REROLL, NO_BIBA_TO_BUY, BibacoinAction,
 } from '../types/services/bibacoin.service.types';
@@ -12,7 +12,7 @@ import {
   ShopAction,
   Product,
 } from '../types/services/shop.service.types';
-import { ShopCommand } from '../types/globals/commands.types';
+import { CommandCategory, ShopCommand } from '../types/globals/commands.types';
 import BaseService from './base.service';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
@@ -45,23 +45,25 @@ export default class ShopService extends BaseService {
 
   @DeleteRequestMessage()
   @DeleteLastMessage(BotMessage.SHOP)
-  private static async sendProductsList(ctx: TelegrafContext): Promise<Message> {
+  private static async sendProductsList(ctx: Context): Promise<Message> {
     const list = shopUtils.getProductsList();
 
     return ctx.reply(
       'За бибакоины можно купить:',
-      Markup.inlineKeyboard([
-        ...list.map((product) => [Markup.callbackButton(
-          shopUtils.getProductActionContext(product),
-          shopUtils.getActionByProduct(product),
-        )]),
-        [Markup.callbackButton('Проверить баланс', BibacoinAction.BALANCE)],
-      ]).extra(),
+      {
+        reply_markup: Markup.inlineKeyboard([
+          ...list.map((product) => [Markup.button.callback(
+            shopUtils.getProductActionContext(product),
+            shopUtils.getActionByProduct(product),
+          )]),
+          [Markup.button.callback('Проверить баланс', BibacoinAction.BALANCE)],
+        ]).reply_markup,
+      },
     );
   }
 
   @UpdateLastMessage(BotMessage.BIBA_TABLE)
-  private async buyOneCM(ctx: TelegrafContext): Promise<void> {
+  private async buyOneCM(ctx: Context): Promise<void> {
     try {
       const price = shopUtils.getProductPrice(Product.BIBA_CM);
       const chatId = ctx.chat!.id;
@@ -85,13 +87,17 @@ export default class ShopService extends BaseService {
       await this.bibacoinService.withdrawCoins(userId, chatId, price);
       await ctx.answerCbQuery(`Теперь твоя биба ${currentBiba.size + 1} см`);
     } catch (e) {
-      await ctx.answerCbQuery(e.message, true);
+      await ctx.answerCbQuery(e.message, { show_alert: true });
       throw e;
     }
   }
 
-  protected initListeners(): void {
-    this.bot.addListeners([
+  protected initProps(): void {
+    this.categoryName = CommandCategory.SHOP;
+  }
+
+  protected initListeners(): BotListener[] {
+    return [
       {
         type: BotCommandType.ACTION,
         name: ShopAction.BIBA_CM,
@@ -105,12 +111,13 @@ export default class ShopService extends BaseService {
       {
         type: BotCommandType.COMMAND,
         name: ShopCommand.SHOP,
+        description: 'Магазин / проверка баланса',
         callback: (ctx): Promise<Message> => ShopService.sendProductsList(ctx),
       },
-    ]);
+    ];
   }
 
-  private async buyReroll(ctx: TelegrafContext): Promise<void> {
+  private async buyReroll(ctx: Context): Promise<void> {
     try {
       const price = shopUtils.getProductPrice(Product.BIBA_REROLL);
       const chatId = ctx.chat!.id;
@@ -134,7 +141,7 @@ export default class ShopService extends BaseService {
       await this.bibacoinService.withdrawCoins(userId, chatId, price);
       await ctx.answerCbQuery('Реролл куплен!');
     } catch (e) {
-      await ctx.answerCbQuery(e.message, true);
+      await ctx.answerCbQuery(e.message, { show_alert: true });
       throw e;
     }
   }

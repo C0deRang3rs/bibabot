@@ -6,6 +6,13 @@ export interface Biba {
   userId: number;
 }
 
+export interface DailyBibaResponse {
+  message: string;
+  terrorists: Biba[];
+}
+
+export const MAX_BIBA_SIZE = 35;
+export const TERRORISCTIC_BIBA_SIZE = 500;
 export const POSITIVE_BIBA = 'Так держать!';
 export const NEGATIVE_BIBA = 'Чет ты спустил малясь...';
 export const SAME_BIBA = 'Стабильность - признак мастерства.';

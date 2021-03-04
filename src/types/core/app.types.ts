@@ -7,6 +7,9 @@ import GlobalService from '../../services/global.service';
 import MemeService from '../../services/meme.service';
 import ConfigService from '../../services/config.service';
 import StickerService from '../../services/sticker.service';
+import JailService from '../../services/jail.service';
+import LabelService from '../../services/label.service';
+import HelpService from '../../services/help.service';
 
 export type AppServices =
   typeof ChangeTitleService |
@@ -17,4 +20,7 @@ export type AppServices =
   typeof GlobalService |
   typeof MemeService |
   typeof StickerService |
-  typeof ConfigService;
+  typeof ConfigService |
+  typeof JailService |
+  typeof HelpService |
+  typeof LabelService;

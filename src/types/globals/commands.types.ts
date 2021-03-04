@@ -1,6 +1,10 @@
+import { BibacoinAction } from '../services/bibacoin.service.types';
+import { ConfigAction } from '../services/config.service.types';
+import { MemeAction } from '../services/meme.service.types';
+import { ShopAction } from '../services/shop.service.types';
+
 export enum ChangeTitleCommandType {
   RENAME = 'rename',
-  ITERATION_CHANGE = 'iteration_change',
 }
 
 export enum BibaCommand {
@@ -40,11 +44,57 @@ export enum ConfigCommand {
   CONFIG = 'config',
 }
 
-export enum GlobalCommand {
-  START = 'start',
-}
-
 export enum StickerCommand {
   REMOVE_STICKER = 'remove_sticker',
   STICKERS = 'stickers',
 }
+
+export enum JailCommand {
+  VOTEBAN = 'voteban',
+}
+
+export enum LabelCommand {
+  BUY_LABEL = 'buy_label',
+}
+
+export enum HelpCommand {
+  HELP = 'help',
+}
+
+export enum CommandCategory {
+  SHOP = 'Магазин 🛒',
+  BIBA = 'Биба 🍆',
+  TRASH = 'Разное',
+  OTHER = 'Другое',
+  STICKERS = 'Стикеры 🙂',
+  COIN = 'Бибакоины 💰',
+}
+
+export interface CommandInfo{
+  category: CommandCategory;
+  description: string;
+}
+
+export type CategorizedCommands = {
+  [K in CommandCategory]: CommandInfo[];
+};
+
+export type BotCommand =
+  ChangeTitleCommandType
+  | BibaCommand
+  | BibacoinCommand
+  | BibacoinDebugCommand
+  | BibaDebugCommand
+  | TrashCommand
+  | ShopCommand
+  | ConfigCommand
+  | StickerCommand
+  | JailCommand
+  | LabelCommand
+  | HelpCommand;
+
+export type BotAction =
+  BibacoinAction
+  | MemeAction
+  | ConfigAction
+  | ShopAction;

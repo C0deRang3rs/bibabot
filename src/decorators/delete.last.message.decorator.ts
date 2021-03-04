@@ -1,4 +1,4 @@
-import { TelegrafContext } from 'telegraf/typings/context';
+import { Context } from 'telegraf/typings/context';
 import { Message } from 'telegraf/typings/telegram-types';
 import Bot from '../core/bot';
 import LastMessageRepository from '../repositories/last.message.repo';
@@ -8,16 +8,16 @@ const DeleteLastMessage = (prefix: string) => (_target: object, _propKey: string
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
-  desc.value = async function wrapped(...args: [TelegrafContext]): Promise<object> {
+  desc.value = async function wrapped(...args: [Context]): Promise<object> {
     const message: Message = await method.apply(this, args);
-    const chatId = message.chat!.id;
+    const chatId = message.chat.id;
     const lastMessage = await lastMessageRepo.getLastMessage(prefix, chatId);
 
     if (lastMessage) {
       try {
         await Bot.getInstance().app.telegram.deleteMessage(chatId, lastMessage);
       } catch (err) {
-        Bot.handleError(new Error(`Can't delete last message for chat ${chatId}`));
+        Bot.handleError(`Error: ${err.description} in DeleteLastMessage decorator`);
       }
     }
 

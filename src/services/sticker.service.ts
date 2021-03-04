@@ -4,10 +4,10 @@ import fs from 'fs';
 import puppeteer from 'puppeteer';
 import axios from 'axios';
 import gm from 'gm';
-import { TelegrafContext } from 'telegraf/typings/context';
+import { Context } from 'telegraf/typings/context';
 import BaseService from './base.service';
-import { BotCommandType, TelegramError } from '../types/core/bot.types';
-import { StickerCommand } from '../types/globals/commands.types';
+import { BotCommandType, BotListener, TelegramError } from '../types/core/bot.types';
+import { CommandCategory, StickerCommand } from '../types/globals/commands.types';
 import StickerSetRepository from '../repositories/sticker.repo';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import RepliableError from '../types/globals/repliable.error';
@@ -25,8 +25,6 @@ import { getUpdatedMessage } from '../utils/lists.util';
 
 export default class StickerService extends BaseService {
   private static instance: StickerService;
-
-  private avatarMap = new Map<number, Buffer>();
 
   private constructor(
     private stickerSetRepo: StickerSetRepository,
@@ -102,12 +100,27 @@ export default class StickerService extends BaseService {
   @OnlyReply(false)
   @DeleteRequestMessage()
   @UpdateLastMessage(BotMessage.STICKER_LIST)
-  public async handleStickerCreation(ctx: TelegrafContext, next: Function | undefined): Promise<void> {
+  public async handleStickerCreation(ctx: Context, next: Function | undefined): Promise<void> {
+    if (
+      !ctx.from
+      || !ctx.chat
+      || !ctx.update
+      || !('title' in ctx.chat!)
+      || !('reply_to_message' in ctx.message!)
+      || !(('text' in ctx.message.reply_to_message!))
+    ) {
+      throw new Error('Wrong context');
+    }
+
     const reply = ctx.message!.reply_to_message!;
     const text = reply.text!;
     const messageAuthor = reply.from!;
     const chatId = ctx!.chat!.id;
-    let ownerId = ctx.message!.from!.id;
+    
+    const owner = (await this.bot.app.telegram.getChatAdministrators(chatId)).find((usr) => usr.status === STATUS_CREATOR)?.user;
+    const ownerId = owner ? owner.id : ctx.message!.from!.id;
+
+    let imageStream: Buffer | null = null;
 
     if (!text) {
       throw new RepliableError('У этого сообщения нет текста', ctx);
@@ -122,14 +135,78 @@ export default class StickerService extends BaseService {
     const time = `${`0${date.getUTCHours()}`.slice(-2)}:${`0${date.getUTCMinutes()}`.slice(-2)}`;
 
     await StickerService.createImage(text, messageAuthor, time);
+    imageStream = fs.readFileSync(`${__dirname}/../../example.png`);
 
-    const imageStream = fs.readFileSync(`${__dirname}/../../example.png`);
-
-    const owner = (await this.bot.app.telegram.getChatAdministrators(chatId)).find((usr) => usr.status === STATUS_CREATOR)?.user;
-
-    if (owner) {
-      ownerId = owner.id;
+    if(!imageStream) {
+      throw new RepliableError('Не удалось получить изображение', ctx);
     }
+
+    await this.createStickerFromImage(ctx, chatId, ownerId, messageAuthor, imageStream);
+
+    next!();
+  }
+
+  @ReplyWithError()
+  @OnlyReply()
+  @DeleteRequestMessage()
+  @DeleteResponseMessage(5000)
+  @UpdateLastMessage(BotMessage.STICKER_LIST)
+  private async removeStickerFromPack(ctx: Context): Promise<Message> {
+    if (
+      !ctx.chat
+      || !('reply_to_message' in ctx.message!)
+      || !('sticker' in ctx.message!.reply_to_message!)
+    ) {
+      throw new Error('Wrong context');
+    }
+
+    const reply = ctx.message.reply_to_message;
+
+    if (!reply.sticker) {
+      throw new RepliableError('Реплай должен быть на стикер', ctx);
+    }
+
+    try {
+      const botStickerSet = await this.stickerSetRepo.getStickerSet(ctx.chat.id!);
+
+      if (!botStickerSet) {
+        throw new RepliableError('Для этого чата пока нет стикер сета', ctx);
+      }
+
+      if (!botStickerSet.names.includes(reply.sticker.set_name!)) {
+        throw new RepliableError('Этот стикер не принадлежит этому чату', ctx);
+      }
+
+      await this.bot.app.telegram.deleteStickerFromSet(reply.sticker.file_id);
+    } catch (err) {
+      if (err instanceof RepliableError) {
+        throw err;
+      }
+
+      throw new RepliableError('Стикер не удалён. Либо он не принадлежит боту, либо он был удалён ранее', ctx);
+    }
+
+    await this.bot.app.telegram.deleteMessage(ctx.chat!.id, reply.message_id);
+
+    return ctx.reply('Стикер удалён');
+  }
+
+  @DeleteRequestMessage()
+  @DeleteLastMessage(BotMessage.STICKER_LIST)
+  private static async sendStickerList(ctx: Context): Promise<Message> {
+    const { text, extra } = await getUpdatedMessage(BotMessage.STICKER_LIST, ctx.chat!.id!);
+    return ctx.reply(text, extra);
+  }
+
+  private async createStickerFromImage(ctx: Context, chatId: number, ownerId: number, messageAuthor: User, imageStream: Buffer) {
+    if (
+      !('title' in ctx.chat!)
+      || !('reply_to_message' in ctx.message!)
+    ) {
+      throw new Error('Wrong context');
+    }
+
+    const reply = ctx.message!.reply_to_message!;
 
     const createdSet = await this.stickerSetRepo.getStickerSet(chatId);
 
@@ -143,7 +220,6 @@ export default class StickerService extends BaseService {
             ownerId,
             name,
             { png_sticker: { source: imageStream }, emojis: '🍌' },
-            false,
           );
 
           setName = name;
@@ -174,10 +250,10 @@ export default class StickerService extends BaseService {
 
         if (createdSet) {
           // eslint-disable-next-line max-len
-          setName = `set${createdSet.names.length + 1}_${chatId.toString().replace('-', '1')}_by_${this.bot.app.options.username}`;
+          setName = `set${createdSet.names.length + 1}_${chatId.toString().replace('-', '1')}_by_${ctx.me}`;
           payload.names = [...createdSet.names, setName];
         } else {
-          setName = `set1_${chatId.toString().replace('-', '1')}_by_${this.bot.app.options.username}`;
+          setName = `set1_${chatId.toString().replace('-', '1')}_by_${ctx.me}`;
           payload.names = [setName];
         }
 
@@ -209,66 +285,26 @@ export default class StickerService extends BaseService {
 
       await ctx.replyWithSticker(sticker);
     }
-
-    next!();
   }
 
-  @ReplyWithError()
-  @OnlyReply()
-  @DeleteRequestMessage()
-  @DeleteResponseMessage(5000)
-  @UpdateLastMessage(BotMessage.STICKER_LIST)
-  private async removeStickerFromPack(ctx: TelegrafContext): Promise<Message> {
-    const reply = ctx.message!.reply_to_message!;
-
-    if (!reply.sticker) {
-      throw new RepliableError('Реплай должен быть на стикер', ctx);
-    }
-
-    try {
-      const botStickerSet = await this.stickerSetRepo.getStickerSet(ctx.chat!.id!);
-
-      if (!botStickerSet) {
-        throw new RepliableError('Для этого чата пока нет стикер сета', ctx);
-      }
-
-      if (!botStickerSet.names.includes(reply.sticker.set_name!)) {
-        throw new RepliableError('Этот стикер не принадлежит этому чату', ctx);
-      }
-
-      await this.bot.app.telegram.deleteStickerFromSet(reply.sticker.file_id);
-    } catch (err) {
-      if (err instanceof RepliableError) {
-        throw err;
-      }
-
-      throw new RepliableError('Стикер не удалён. Либо он не принадлежит боту, либо он был удалён ранее', ctx);
-    }
-
-    await this.bot.app.telegram.deleteMessage(ctx.chat!.id, reply.message_id);
-
-    return ctx.reply('Стикер удалён');
+  protected initProps(): void {
+    this.categoryName = CommandCategory.STICKERS;
   }
 
-  @DeleteRequestMessage()
-  @DeleteLastMessage(BotMessage.STICKER_LIST)
-  private static async sendStickerList(ctx: TelegrafContext): Promise<Message> {
-    const { text, extra } = await getUpdatedMessage(BotMessage.STICKER_LIST, ctx.chat!.id!);
-    return ctx.reply(text, extra);
-  }
-
-  protected initListeners(): void {
-    this.bot.addListeners([
+  protected initListeners(): BotListener[] {
+    return [
       {
         type: BotCommandType.COMMAND,
         name: StickerCommand.REMOVE_STICKER,
+        description: '[Ответ на стикер] удаляет стикер, созданый ботом, из пака',
         callback: (ctx): Promise<Message> => this.removeStickerFromPack(ctx),
       },
       {
         type: BotCommandType.COMMAND,
         name: StickerCommand.STICKERS,
+        description: 'Список наборов стикеров даного чата',
         callback: (ctx): Promise<Message> => StickerService.sendStickerList(ctx),
       },
-    ]);
+    ];
   }
 }

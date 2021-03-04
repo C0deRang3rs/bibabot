@@ -11,6 +11,7 @@ export enum ShopAction {
 export enum ProductPrice {
   BIBA_CM = 15,
   BIBA_REROLL = 50,
+  LABEL = 500,
 }
 
 export enum ProductActionContext {
@@ -28,3 +29,5 @@ export enum ActivityContext {
   BIBA_CM = 'Один см бибы',
   MEME_LIKE = 'Лайк на мем',
 }
+
+export const MAX_LABEL_LENGTH = 16;

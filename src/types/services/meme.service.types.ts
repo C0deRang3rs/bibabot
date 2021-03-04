@@ -7,6 +7,7 @@ export interface Stat {
   likeIds: Array<number>;
   dislikeIds: Array<number>;
   authorId: number;
+  createdAt: Date;
 }
 
 export enum MemeStatStatus {
@@ -19,4 +20,5 @@ export interface MemeStatResult {
   message: string;
   status: MemeStatStatus;
   authorId: number;
+  date: Date;
 }
