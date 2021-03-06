@@ -4,7 +4,7 @@ import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import { BotCommandType, BotListener } from '../types/core/bot.types';
-import { CategorizedCommands, CommandCategory, HelpCommand } from '../types/globals/commands.types';
+import { CategorizedCommands, CommandCategory, HelpCommand, SortedCommandCategories } from '../types/globals/commands.types';
 import { BotMessage } from '../types/globals/message.types';
 import BaseService from './base.service';
 
@@ -41,16 +41,8 @@ export default class HelpService extends BaseService {
       ), {} as CategorizedCommands);
 
     const sortedCategories = {} as CategorizedCommands;
-    const sort = [
-      CommandCategory.BIBA,
-      CommandCategory.COIN,
-      CommandCategory.SHOP,
-      CommandCategory.STICKERS,
-      CommandCategory.TRASH,
-      CommandCategory.OTHER,
-    ];
 
-    sort.forEach((category) => {
+    SortedCommandCategories.forEach((category) => {
       sortedCategories[category] = commandsByCategory[category];
     });
 

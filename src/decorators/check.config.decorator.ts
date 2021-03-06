@@ -1,5 +1,6 @@
 import { Context } from 'telegraf/typings/context';
 import ConfigService from '../services/config.service';
+import RepliableError from '../types/globals/repliable.error';
 import { ConfigProperty } from '../types/services/config.service.types';
 import { MemeAction } from '../types/services/meme.service.types';
 
@@ -25,6 +26,10 @@ const CheckConfig = (property: ConfigProperty) => (_target: object, _propKey: st
       if (typeof secondArgument !== 'boolean' || (typeof secondArgument === 'boolean' && secondArgument)) {
         if (typeof args[1] === 'function') {
           args[1]();
+        }
+
+        if (typeof args[0] === 'object') {
+          throw new RepliableError('Функция отключена в /config', args[0]);
         }
 
         return {};

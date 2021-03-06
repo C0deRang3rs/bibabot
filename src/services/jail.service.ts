@@ -1,15 +1,19 @@
 import moment from 'moment';
 import { Context } from 'telegraf/typings/context';
 import { MessageEntity } from 'telegraf/typings/telegram-types';
+import CheckConfig from '../decorators/check.config.decorator';
 import CommandTemplate from '../decorators/command.template.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import BibaRepository from '../repositories/biba.repo';
+import ConfigRepository from '../repositories/config.repo';
 import { BotCommandType, BotListener, CommandType } from '../types/core/bot.types';
-import { JailCommand } from '../types/globals/commands.types';
+import { CommandCategory, JailCommand } from '../types/globals/commands.types';
 import RepliableError from '../types/globals/repliable.error';
+import { ConfigProperty } from '../types/services/config.service.types';
 import { JailPoll, PollAnswer, PollType } from '../types/services/poll.service.types';
 import optional from '../utils/decorators.utils';
+import plural from '../utils/pluralize.utils';
 import BaseService from './base.service';
 import PollService from './poll.service';
 
@@ -18,6 +22,7 @@ export default class JailService extends BaseService {
 
   private constructor(
     private readonly bibaRepo: BibaRepository,
+    private readonly configRepo: ConfigRepository,
     private readonly pollService: PollService,
   ) {
     super();
@@ -28,6 +33,7 @@ export default class JailService extends BaseService {
     if (!JailService.instance) {
       JailService.instance = new JailService(
         new BibaRepository(),
+        new ConfigRepository(),
         PollService.getInstance(),
       );
     }
@@ -37,6 +43,7 @@ export default class JailService extends BaseService {
 
   @DeleteRequestMessage()
   @ReplyWithError()
+  @CheckConfig(ConfigProperty.JAIL)
   @CommandTemplate([CommandType.COMMAND, CommandType.USER_MENTION, optional(CommandType.NUMBER)])
   private async voteban(ctx: Context): Promise<void> {
     if (
@@ -76,16 +83,20 @@ export default class JailService extends BaseService {
     if (timeParam && (!requestedTime || requestedTime <= 0)) throw new RepliableError('Wrong format', ctx);
 
     const banTime = requestedTime || 1440;
-    const membersCount = await this.bot.app.telegram.getChatMembersCount(chatId);
-    const minVoteCount = Math.floor(membersCount / 2);
+
+    console.log(requestedTime);
+
+    const minVoteCount = await (await this.configRepo.getConfigByChatId(chatId)).JAIL_MIN_VOTE as number;
 
     await this.pollService.createPoll<JailPoll>(
       {
         title: `Забанить эту суку ${userMention}${banTime >= 527040 ? ' навсегда'
-          : banTime !== 1440 ? ` на ${banTime} мин` : ' на день'}? Минимум ${minVoteCount + 1} голоса`,
+          : banTime !== 1440
+            ? ` на ${banTime} мин` : ' на день'}? Минимум ${minVoteCount + 1} ${plural(['голос', 'голоса', 'голосов'], minVoteCount + 1)}`,
         options: [PollAnswer.YES, PollAnswer.NO],
         extra: { is_anonymous: false },
         minVoteCount,
+        releaseDate: moment().add(banTime, 'minutes').toDate(),
         pollType: PollType.VOTE_BAN,
         chatId,
         userId,
@@ -96,13 +107,13 @@ export default class JailService extends BaseService {
   public async imprisonUser(
     chatId: number,
     userId: number,
-    releaseDate = moment().add(1, 'd'),
+    releaseDate: Date = moment().toDate(),
   ): Promise<void> {
     await this.bot.app.telegram.restrictChatMember(chatId, userId, {
       permissions: {
         can_send_messages: false,
       },
-      until_date: releaseDate.unix(),
+      until_date: moment(releaseDate).unix(),
     });
 
     const user = await this.bibaRepo.getBibaByIds(chatId, userId);
@@ -110,7 +121,7 @@ export default class JailService extends BaseService {
     if (user) {
       await this.bot.app.telegram.sendMessage(
         chatId,
-        `${user.username}, ты в бане, клоун! Возвращайся ${releaseDate.fromNow()}.`,
+        `${user.username}, ты в бане, клоун! Возвращайся ${moment(releaseDate).fromNow()}.`,
       );
     }
   }
@@ -122,6 +133,7 @@ export default class JailService extends BaseService {
       userId,
       pollId,
       messageId,
+      releaseDate
     } = poll;
 
     const positiveVotes = ctx.poll!.options.find((option) => option.text === PollAnswer.YES)!.voter_count;
@@ -130,7 +142,7 @@ export default class JailService extends BaseService {
     const isNegativeWon = negativeVotes > minVoteCount;
 
     if (isPositiveWon) {
-      await this.imprisonUser(chatId, userId);
+      await this.imprisonUser(chatId, userId, releaseDate);
     }
 
     if (isNegativeWon) {
@@ -140,6 +152,10 @@ export default class JailService extends BaseService {
     if (isPositiveWon || isNegativeWon) {
       await this.pollService.stopPoll(pollId, chatId, messageId);
     }
+  }
+
+  protected initProps(): void {
+    this.categoryName = CommandCategory.JAIL;
   }
 
   protected initListeners(): BotListener[] {

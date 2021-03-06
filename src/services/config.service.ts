@@ -1,14 +1,17 @@
 import { Context } from 'telegraf/typings/context';
-import { Message, InlineKeyboardMarkup } from 'telegraf/typings/telegram-types';
+import { Message, InlineKeyboardMarkup, InlineKeyboardButton } from 'telegraf/typings/telegram-types';
 import { Markup } from 'telegraf';
 import BaseService from './base.service';
-import { BotCommandType, BotListener } from '../types/core/bot.types';
-import { BotAction, ConfigCommand } from '../types/globals/commands.types';
+import { BotCommandType, BotListener, CommandType } from '../types/core/bot.types';
+import { BotAction, CommandCategory, ConfigCommand } from '../types/globals/commands.types';
 import { ConfigAction, ConfigProperty, getPropertyDescription } from '../types/services/config.service.types';
 import ConfigRepository from '../repositories/config.repo';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import { BotMessage } from '../types/globals/message.types';
+import ReplyWithError from '../decorators/reply.with.error.decorator';
+import CommandTemplate from '../decorators/command.template.decorator';
+import RepliableError from '../types/globals/repliable.error';
 
 export default class ConfigService extends BaseService {
   private static instance: ConfigService;
@@ -30,6 +33,46 @@ export default class ConfigService extends BaseService {
   }
 
   @DeleteRequestMessage()
+  @ReplyWithError()
+  @CommandTemplate([CommandType.COMMAND, CommandType.NUMBER])
+  private async changeJailMinVote(ctx: Context): Promise<Message> {
+    if (
+      !ctx.from
+      || !ctx.chat
+      || !ctx.message
+      || !('text' in ctx.message)
+    ) {
+      throw new Error('Wrong context');
+    }
+
+
+    //TODO: вынести команды для создателя чата / админов с высокими правами
+    const chatId = ctx.chat.id;
+    const admins = await this.bot.app.telegram.getChatAdministrators(ctx.chat.id);
+    const isUserCreator = admins.find((user) => user.user.id === ctx.from!.id)?.status === 'creator';
+
+    if (!isUserCreator) {
+      throw new RepliableError('Команда доступна только основателю чата', ctx);
+    }
+
+    const membersCount = await this.bot.app.telegram.getChatMembersCount(chatId);
+    const minVoteCount = parseInt(ctx.message.text.split(' ')[1]);
+
+    if (minVoteCount > membersCount) {
+      throw new RepliableError('Нельзя указать больше чем кол-во пользователей в чате', ctx);
+    }
+
+    if (minVoteCount <= 1) {
+      throw new RepliableError('Нельзя указать меньше чем 1', ctx);
+    }
+
+    const currentConfig = await this.configRepo.getConfigByChatId(chatId);
+    await this.configRepo.setConfigByChatId(chatId, { ...currentConfig, JAIL_MIN_VOTE: minVoteCount - 1 });
+
+    return ctx.reply(`Минимальное количество голосов для бана изменено на ${minVoteCount}`);
+  }
+
+  @DeleteRequestMessage()
   @DeleteLastMessage(BotMessage.CONFIG)
   private async configMenu(ctx: Context): Promise<Message> {
     return ctx.reply(
@@ -38,9 +81,8 @@ export default class ConfigService extends BaseService {
     );
   }
 
-  public async checkProperty(chatId: number, property: ConfigProperty): Promise<boolean> {
+  public async checkProperty(chatId: number, property: ConfigProperty): Promise<boolean | number> {
     const config = await this.configRepo.getConfigByChatId(chatId);
-
     return config[property];
   }
 
@@ -51,6 +93,13 @@ export default class ConfigService extends BaseService {
         name: ConfigCommand.CONFIG,
         description: 'Настройки бота для данного чата',
         callback: (ctx): Promise<Message> => this.configMenu(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: ConfigCommand.MIN_VOTE_COUNT,
+        category: CommandCategory.JAIL,
+        description: 'Изменить колво голосов для бана. (Доступно только для основателя чата)',
+        callback: (ctx): Promise<Message> => this.changeJailMinVote(ctx),
       },
     ] as BotListener[];
 
@@ -89,10 +138,14 @@ export default class ConfigService extends BaseService {
     const config = await this.configRepo.getConfigByChatId(chatId);
 
     return Markup.inlineKeyboard([
-      ...Object.keys(config).map((property) => [Markup.button.callback(
-        `${getPropertyDescription(property as ConfigProperty)} - ${config[property as ConfigProperty] ? 'ON' : 'OFF'}`,
-        config[property as ConfigProperty] ? `${ConfigAction.TURN_OFF}_${property}` : `${ConfigAction.TURN_ON}_${property}`,
-      )]),
+      ...Object.keys(config).reduce((acc, property) => {
+        const description = getPropertyDescription(property as ConfigProperty);
+        if (description) {
+          return [...acc, [Markup.button.callback(`${description} - ${config[property as ConfigProperty] ? 'ON' : 'OFF'}`, config[property as ConfigProperty] ? `${ConfigAction.TURN_OFF}_${property}` : `${ConfigAction.TURN_ON}_${property}`)]];
+        }
+
+        return acc;
+      }, [] as InlineKeyboardButton[][]),
     ]).reply_markup;
   }
 
