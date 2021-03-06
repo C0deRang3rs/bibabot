@@ -23,7 +23,7 @@ export interface BasePoll {
 export interface JailPoll extends BasePoll {
   minVoteCount: number;
   userId: number;
-  date?: Date;
+  releaseDate: Date;
 }
 
 export interface VoteHandler<T extends BasePoll> {
