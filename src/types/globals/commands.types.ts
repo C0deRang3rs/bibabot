@@ -42,6 +42,7 @@ export enum ShopCommand {
 
 export enum ConfigCommand {
   CONFIG = 'config',
+  MIN_VOTE_COUNT = 'min_vote_count'
 }
 
 export enum StickerCommand {
@@ -67,10 +68,21 @@ export enum CommandCategory {
   TRASH = 'Разное',
   OTHER = 'Другое',
   STICKERS = 'Стикеры 🙂',
+  JAIL = 'Тюрьма 🚨',
   COIN = 'Бибакоины 💰',
 }
 
-export interface CommandInfo{
+export const SortedCommandCategories = [
+  CommandCategory.BIBA,
+  CommandCategory.COIN,
+  CommandCategory.SHOP,
+  CommandCategory.STICKERS,
+  CommandCategory.JAIL,
+  CommandCategory.TRASH,
+  CommandCategory.OTHER,
+]
+
+export interface CommandInfo {
   category: CommandCategory;
   description: string;
 }
