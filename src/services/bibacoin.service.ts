@@ -1,5 +1,5 @@
 import { Context } from 'telegraf/typings/context';
-import { Message } from 'telegraf/typings/telegram-types';
+import { Message } from 'telegraf/typings/core/types/typegram';
 import {
   ZERO_BALANCE,
   BibacoinAction,

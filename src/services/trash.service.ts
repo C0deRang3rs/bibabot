@@ -1,6 +1,6 @@
 import { Context } from 'telegraf/typings/context';
 import fs from 'fs';
-import { Message } from 'telegraf/typings/telegram-types';
+import { Message } from 'telegraf/typings/core/types/typegram';
 import { CommandCategory, TrashCommand } from '../types/globals/commands.types';
 import { BotCommandType, BotListener, CommandType } from '../types/core/bot.types';
 import StatRepository from '../repositories/stat.repo';
@@ -38,7 +38,7 @@ export default class TrashService extends BaseService {
     return TrashService.instance;
   }
 
-  @CheckConfig(ConfigProperty.TRASH_REPLY)
+  @CheckConfig(ConfigProperty.TRASH_REPLY, false)
   public static async trashHandler(ctx: Context, next: Function): Promise<Function> {
     if (
       !ctx.message

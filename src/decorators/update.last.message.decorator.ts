@@ -1,7 +1,7 @@
 import { Context } from 'telegraf/typings/context';
 import Bot from '../core/bot';
 import LastMessageRepository from '../repositories/last.message.repo';
-import { getUpdatedMessage } from '../utils/lists.util';
+import getUpdatedMessage from '../utils/lists.util';
 
 const UpdateLastMessage = (prefix: string) => (_target: object, _propKey: string, desc: PropertyDescriptor): void => {
   const lastMessageRepo = new LastMessageRepository();

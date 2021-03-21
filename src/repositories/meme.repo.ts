@@ -26,7 +26,7 @@ export default class MemeRepository extends BaseRepository {
     let stat = await this.getStat(chatId, responseMessageId);
 
     if (!stat) {
-      throw new Error('Данный мем удалён из базы')
+      throw new Error('Данный мем удалён из базы');
     }
 
     let response = {
@@ -68,7 +68,7 @@ export default class MemeRepository extends BaseRepository {
     let stat = await this.getStat(chatId, responseMessageId);
 
     if (!stat) {
-      throw new Error('Данный мем удалён из базы')
+      throw new Error('Данный мем удалён из базы');
     }
 
     let response: MemeStatResult = {
@@ -137,6 +137,7 @@ export default class MemeRepository extends BaseRepository {
   }
 
   public async batchUpdate(payload: Record<string, Stat>): Promise<void> {
+    // eslint-disable-next-line no-restricted-syntax
     for await (const [key, stat] of Object.entries(payload)) {
       await this.redis.setAsync(key, JSON.stringify(stat));
     }
