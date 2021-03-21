@@ -1,5 +1,5 @@
 import { Context } from 'telegraf/typings/context';
-import { Message } from 'telegraf/typings/telegram-types';
+import { Message } from 'telegraf/typings/core/types/typegram';
 import PollRepository from '../repositories/poll.repo';
 import { BotListener } from '../types/core/bot.types';
 import {

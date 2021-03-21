@@ -1,5 +1,5 @@
-import { Message } from 'telegraf/typings/telegram-types';
 import { Context } from 'telegraf';
+import { Message } from 'telegraf/typings/core/types/typegram';
 import { BotEvent, BotListener } from '../types/core/bot.types';
 import BibacoinService from './bibacoin.service';
 import TrashService from './trash.service';

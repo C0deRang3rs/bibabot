@@ -1,10 +1,10 @@
 import BaseRepository from './base.repo';
-import { Config, DEFAULT_CONFIG, ConfigProperty } from '../types/services/config.service.types';
-import Bot from '../core/bot';
+import {
+  Config, DEFAULT_CONFIG, ConfigProperty, IndividualConfigProperty,
+} from '../types/services/config.service.types';
 
 export default class ConfigRepository extends BaseRepository {
   protected entityName = 'config';
-  private readonly bot = Bot.getInstance();
 
   private static compareConfig(config: Config): boolean {
     const currentConfigKeys = Object.keys(config).sort();
@@ -13,11 +13,26 @@ export default class ConfigRepository extends BaseRepository {
     return JSON.stringify(currentConfigKeys) !== JSON.stringify(defaultConfigKeys);
   }
 
+  public async setConfigIndividualProperty(chatId: number, key: IndividualConfigProperty, value: string): Promise<void> {
+    await this.redis.setAsync(`${this.entityName}:${chatId}:${key}`, value);
+  }
+
+  public async getConfigIndividualProperty(chatId: number, key: IndividualConfigProperty, def?: string): Promise<string | null> {
+    const result = await this.redis.getAsync(`${this.entityName}:${chatId}:${key}`);
+
+    if (!result && def) {
+      await this.setConfigIndividualProperty(chatId, key, def);
+      return def;
+    }
+
+    return result;
+  }
+
   public async getConfigByChatId(chatId: number): Promise<Config> {
     const config = await this.redis.getAsync(`${this.entityName}:${chatId}`);
 
     if (!config) {
-      return await this.setDefaultConfig(chatId);
+      return this.setDefaultConfig(chatId);
     }
 
     const resultConfig = JSON.parse(config) as Config;
@@ -38,11 +53,8 @@ export default class ConfigRepository extends BaseRepository {
   }
 
   public async setDefaultConfig(chatId: number): Promise<Config> {
-    const membersCount = await this.bot.app.telegram.getChatMembersCount(chatId);
-    const minVoteCount = Math.floor(membersCount / 2);
+    await this.redis.setAsync(`${this.entityName}:${chatId}`, JSON.stringify({ ...DEFAULT_CONFIG }));
 
-    await this.redis.setAsync(`${this.entityName}:${chatId}`, JSON.stringify({ ...DEFAULT_CONFIG, [ConfigProperty.JAIL_MIN_VOTE]: minVoteCount }));
-
-    return { ...DEFAULT_CONFIG, [ConfigProperty.JAIL_MIN_VOTE]: minVoteCount }
+    return { ...DEFAULT_CONFIG };
   }
 }

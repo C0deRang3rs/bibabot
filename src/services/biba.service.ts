@@ -1,7 +1,7 @@
 import Bull from 'bull';
 import { Markup } from 'telegraf';
 import { Context } from 'telegraf/typings/context';
-import { Message } from 'telegraf/typings/telegram-types';
+import { Message } from 'telegraf/typings/core/types/typegram';
 import { BibaCommand, BibaDebugCommand, CommandCategory } from '../types/globals/commands.types';
 import {
   Biba,
@@ -27,7 +27,6 @@ import {
   MAX_DAILY_BIBACOINT_INCOME,
   NO_BIBA_TO_BUY,
 } from '../types/services/bibacoin.service.types';
-import { getUpdatedMessage } from '../utils/lists.util';
 import UpdateLastMessage from '../decorators/update.last.message.decorator';
 import CheckConfig from '../decorators/check.config.decorator';
 import { ConfigProperty } from '../types/services/config.service.types';
@@ -40,6 +39,7 @@ import { getUsernameFromContext, getUsernameFromUser } from '../utils/data.utils
 import JailService from './jail.service';
 import ChatService from './chat.service';
 import CommandTemplate from '../decorators/command.template.decorator';
+import getUpdatedMessage from '../utils/lists.util';
 
 export default class BibaService extends BaseService {
   private static instance: BibaService;
@@ -232,12 +232,9 @@ export default class BibaService extends BaseService {
     await this.bibaRepo.setAllBibasOutdated(chatId);
 
     if (daily.terrorists.length) {
+      // eslint-disable-next-line no-restricted-syntax
       for await (const terrorist of daily.terrorists) {
-        try {
-          await this.jailService.imprisonUser(chatId, terrorist.userId);
-        } catch (err) {
-          if (err.description === '') {}
-        }
+        await this.jailService.imprisonUser(chatId, terrorist.userId);
       }
     }
 

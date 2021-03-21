@@ -37,10 +37,12 @@ const getStickerListUpdate = async (chatId: number): Promise<UpdateMessageRespon
   return { text: message.join('\n'), extra: { parse_mode: 'HTML' } };
 };
 
-export const getUpdatedMessage = async (prefix: string, chatId: number): Promise<UpdateMessageResponse> => {
+const getUpdatedMessage = async (prefix: string, chatId: number): Promise<UpdateMessageResponse> => {
   switch (prefix) {
     case BotMessage.BIBA_TABLE: return getBibaTableText(chatId);
     case BotMessage.STICKER_LIST: return getStickerListUpdate(chatId);
     default: return {} as UpdateMessageResponse;
   }
 };
+
+export default getUpdatedMessage;

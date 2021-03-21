@@ -4,7 +4,8 @@ import RepliableError from '../types/globals/repliable.error';
 import { ConfigProperty } from '../types/services/config.service.types';
 import { MemeAction } from '../types/services/meme.service.types';
 
-const CheckConfig = (property: ConfigProperty) => (_target: object, _propKey: string, desc: PropertyDescriptor): void => {
+// eslint-disable-next-line max-len
+const CheckConfig = (property: ConfigProperty, throwError = true) => (_target: object, _propKey: string, desc: PropertyDescriptor): void => {
   const method: Function = desc.value;
 
   // eslint-disable-next-line no-param-reassign
@@ -28,7 +29,7 @@ const CheckConfig = (property: ConfigProperty) => (_target: object, _propKey: st
           args[1]();
         }
 
-        if (typeof args[0] === 'object') {
+        if (typeof args[0] === 'object' && throwError) {
           throw new RepliableError('Функция отключена в /config', args[0]);
         }
 

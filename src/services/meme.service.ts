@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 import { Markup } from 'telegraf';
 import { Context } from 'telegraf/typings/context';
+import moment from 'moment';
 import BaseService from './base.service';
 import { BotCommandType, BotListener } from '../types/core/bot.types';
 import MemeRepository from '../repositories/meme.repo';
@@ -11,7 +13,6 @@ import { ConfigProperty } from '../types/services/config.service.types';
 import CheckMessageContent from '../decorators/check.message.content.decorator';
 import { MessageContent } from '../types/globals/message.types';
 import * as shopUtils from '../utils/shop.util';
-import moment from 'moment';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import RepliableError from '../types/globals/repliable.error';
 
@@ -106,9 +107,9 @@ export default class MemeService extends BaseService {
     let response: MemeStatResult | null = null;
 
     try {
-      response = isLike ?
-        await this.memeRepo.addLike(chatId, messageId, userId) :
-        await this.memeRepo.addDislike(chatId, messageId, userId);
+      response = isLike
+        ? await this.memeRepo.addLike(chatId, messageId, userId)
+        : await this.memeRepo.addDislike(chatId, messageId, userId);
     } catch (err) {
       throw new RepliableError(err.message, ctx);
     }
@@ -118,17 +119,17 @@ export default class MemeService extends BaseService {
     }
 
     if (
-      response.status === MemeStatStatus.STAT_SWITCHED ||
-      response.status === MemeStatStatus.STAT_ADDED
+      response.status === MemeStatStatus.STAT_SWITCHED
+      || response.status === MemeStatStatus.STAT_ADDED
     ) {
       const finalPrice = response.status === MemeStatStatus.STAT_SWITCHED ? price * 2 : price;
-      isLike ?
-        await this.bibacoinService.addCoins(response.authorId, chatId, finalPrice) :
-        await this.bibacoinService.withdrawCoins(response.authorId, chatId, finalPrice);
+      isLike
+        ? await this.bibacoinService.addCoins(response.authorId, chatId, finalPrice)
+        : await this.bibacoinService.withdrawCoins(response.authorId, chatId, finalPrice);
     } else {
-      isLike ?
-        await this.bibacoinService.withdrawCoins(response.authorId, chatId, price) :
-        await this.bibacoinService.addCoins(response.authorId, chatId, price);
+      isLike
+        ? await this.bibacoinService.withdrawCoins(response.authorId, chatId, price)
+        : await this.bibacoinService.addCoins(response.authorId, chatId, price);
     }
 
     await this.updateStatMessage(chatId, messageId);
@@ -138,6 +139,7 @@ export default class MemeService extends BaseService {
   public async cleanOldMemes(done: Function): Promise<void> {
     const result = await this.memeRepo.getAllMemes();
 
+    // eslint-disable-next-line no-restricted-syntax
     for await (const [key, value] of Object.entries(result)) {
       if (moment().diff(moment(value.createdAt), 'days') > 30) {
         console.log(`Removed meme with key: ${key}`);
@@ -146,6 +148,21 @@ export default class MemeService extends BaseService {
     }
 
     done();
+  }
+
+  protected initListeners(): BotListener[] {
+    return [
+      {
+        type: BotCommandType.ACTION,
+        name: MemeAction.LIKE,
+        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.LIKE),
+      },
+      {
+        type: BotCommandType.ACTION,
+        name: MemeAction.DISLIKE,
+        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.DISLIKE),
+      },
+    ];
   }
 
   private async updateStatMessage(chatId: number, messageId: number): Promise<void> {
@@ -167,20 +184,5 @@ export default class MemeService extends BaseService {
         Markup.button.callback(`👎 ${dislikes}`, MemeAction.DISLIKE),
       ]).reply_markup,
     );
-  }
-
-  protected initListeners(): BotListener[] {
-    return [
-      {
-        type: BotCommandType.ACTION,
-        name: MemeAction.LIKE,
-        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.LIKE),
-      },
-      {
-        type: BotCommandType.ACTION,
-        name: MemeAction.DISLIKE,
-        callback: (ctx): Promise<void> => this.changeMemeStat(ctx, MemeAction.DISLIKE),
-      },
-    ];
   }
 }
