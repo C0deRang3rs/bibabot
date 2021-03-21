@@ -1,10 +1,12 @@
 import { Context } from 'telegraf/typings/context';
-import { Message, InlineKeyboardMarkup, InlineKeyboardButton } from 'telegraf/typings/telegram-types';
 import { Markup } from 'telegraf';
+import { InlineKeyboardMarkup, Message } from 'telegraf/typings/core/types/typegram';
 import BaseService from './base.service';
 import { BotCommandType, BotListener, CommandType } from '../types/core/bot.types';
 import { BotAction, CommandCategory, ConfigCommand } from '../types/globals/commands.types';
-import { ConfigAction, ConfigProperty, getPropertyDescription } from '../types/services/config.service.types';
+import {
+  ConfigAction, ConfigProperty, getPropertyDescription, IndividualConfigProperty,
+} from '../types/services/config.service.types';
 import ConfigRepository from '../repositories/config.repo';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
@@ -45,8 +47,7 @@ export default class ConfigService extends BaseService {
       throw new Error('Wrong context');
     }
 
-
-    //TODO: вынести команды для создателя чата / админов с высокими правами
+    // TODO: вынести команды для создателя чата / админов с высокими правами
     const chatId = ctx.chat.id;
     const admins = await this.bot.app.telegram.getChatAdministrators(ctx.chat.id);
     const isUserCreator = admins.find((user) => user.user.id === ctx.from!.id)?.status === 'creator';
@@ -56,18 +57,21 @@ export default class ConfigService extends BaseService {
     }
 
     const membersCount = await this.bot.app.telegram.getChatMembersCount(chatId);
-    const minVoteCount = parseInt(ctx.message.text.split(' ')[1]);
+    const minVoteCount = parseInt(ctx.message.text.split(' ')[1], 10);
 
     if (minVoteCount > membersCount) {
       throw new RepliableError('Нельзя указать больше чем кол-во пользователей в чате', ctx);
     }
 
-    if (minVoteCount <= 1) {
+    if (minVoteCount < 1) {
       throw new RepliableError('Нельзя указать меньше чем 1', ctx);
     }
 
-    const currentConfig = await this.configRepo.getConfigByChatId(chatId);
-    await this.configRepo.setConfigByChatId(chatId, { ...currentConfig, JAIL_MIN_VOTE: minVoteCount - 1 });
+    await this.configRepo.setConfigIndividualProperty(
+      chatId,
+      IndividualConfigProperty.JAIL_MIN_VOTE_COUNT,
+      minVoteCount.toString(),
+    );
 
     return ctx.reply(`Минимальное количество голосов для бана изменено на ${minVoteCount}`);
   }
@@ -81,7 +85,7 @@ export default class ConfigService extends BaseService {
     );
   }
 
-  public async checkProperty(chatId: number, property: ConfigProperty): Promise<boolean | number> {
+  public async checkProperty(chatId: number, property: ConfigProperty): Promise<boolean> {
     const config = await this.configRepo.getConfigByChatId(chatId);
     return config[property];
   }
@@ -138,14 +142,10 @@ export default class ConfigService extends BaseService {
     const config = await this.configRepo.getConfigByChatId(chatId);
 
     return Markup.inlineKeyboard([
-      ...Object.keys(config).reduce((acc, property) => {
-        const description = getPropertyDescription(property as ConfigProperty);
-        if (description) {
-          return [...acc, [Markup.button.callback(`${description} - ${config[property as ConfigProperty] ? 'ON' : 'OFF'}`, config[property as ConfigProperty] ? `${ConfigAction.TURN_OFF}_${property}` : `${ConfigAction.TURN_ON}_${property}`)]];
-        }
-
-        return acc;
-      }, [] as InlineKeyboardButton[][]),
+      ...Object.keys(config).map((property) => [Markup.button.callback(
+        `${getPropertyDescription(property as ConfigProperty)} - ${config[property as ConfigProperty] ? 'ON' : 'OFF'}`,
+        config[property as ConfigProperty] ? `${ConfigAction.TURN_OFF}_${property}` : `${ConfigAction.TURN_ON}_${property}`,
+      )]),
     ]).reply_markup;
   }
 

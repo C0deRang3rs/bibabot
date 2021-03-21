@@ -1,6 +1,6 @@
 import { Markup } from 'telegraf';
 import { Context } from 'telegraf/typings/context';
-import { Message } from 'telegraf/typings/telegram-types';
+import { Message } from 'telegraf/typings/core/types/typegram';
 import { BotCommandType, BotListener } from '../types/core/bot.types';
 import {
   NO_BIBA_TO_REROLL, NO_BIBA_TO_BUY, BibacoinAction,

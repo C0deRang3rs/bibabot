@@ -1,4 +1,4 @@
-import { Message } from 'telegraf/typings/telegram-types';
+import { Message } from 'telegraf/typings/core/types/typegram';
 import { BibacoinActivity, BibacoinCredit } from '../types/services/bibacoin.service.types';
 import {
   Product,

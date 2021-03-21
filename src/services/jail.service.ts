@@ -1,6 +1,6 @@
 import moment from 'moment';
 import { Context } from 'telegraf/typings/context';
-import { MessageEntity } from 'telegraf/typings/telegram-types';
+import { MessageEntity } from 'telegraf/typings/core/types/typegram';
 import CheckConfig from '../decorators/check.config.decorator';
 import CommandTemplate from '../decorators/command.template.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
@@ -10,7 +10,7 @@ import ConfigRepository from '../repositories/config.repo';
 import { BotCommandType, BotListener, CommandType } from '../types/core/bot.types';
 import { CommandCategory, JailCommand } from '../types/globals/commands.types';
 import RepliableError from '../types/globals/repliable.error';
-import { ConfigProperty } from '../types/services/config.service.types';
+import { ConfigProperty, IndividualConfigProperty } from '../types/services/config.service.types';
 import { JailPoll, PollAnswer, PollType } from '../types/services/poll.service.types';
 import optional from '../utils/decorators.utils';
 import plural from '../utils/pluralize.utils';
@@ -84,15 +84,19 @@ export default class JailService extends BaseService {
 
     const banTime = requestedTime || 1440;
 
-    console.log(requestedTime);
-
-    const minVoteCount = await (await this.configRepo.getConfigByChatId(chatId)).JAIL_MIN_VOTE as number;
+    const membersCount = await this.bot.app.telegram.getChatMembersCount(chatId);
+    const defaultMinVoteCount = Math.floor(membersCount / 2).toString();
+    const configMinVoteCount = await this.configRepo.getConfigIndividualProperty(
+      chatId,
+      IndividualConfigProperty.JAIL_MIN_VOTE_COUNT,
+      defaultMinVoteCount,
+    );
+    const minVoteCount = parseInt(configMinVoteCount!, 10);
 
     await this.pollService.createPoll<JailPoll>(
       {
-        title: `Забанить эту суку ${userMention}${banTime >= 527040 ? ' навсегда'
-          : banTime !== 1440
-            ? ` на ${banTime} мин` : ' на день'}? Минимум ${minVoteCount + 1} ${plural(['голос', 'голоса', 'голосов'], minVoteCount + 1)}`,
+        // eslint-disable-next-line max-len
+        title: `Забанить эту суку ${userMention}${banTime >= 527040 ? ' навсегда' : banTime !== 1440 ? ` на ${banTime} мин` : ' на день'}? Минимум ${minVoteCount} ${plural(['голос', 'голоса', 'голосов'], minVoteCount)}`,
         options: [PollAnswer.YES, PollAnswer.NO],
         extra: { is_anonymous: false },
         minVoteCount,
@@ -133,7 +137,7 @@ export default class JailService extends BaseService {
       userId,
       pollId,
       messageId,
-      releaseDate
+      releaseDate,
     } = poll;
 
     const positiveVotes = ctx.poll!.options.find((option) => option.text === PollAnswer.YES)!.voter_count;

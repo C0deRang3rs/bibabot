@@ -1,10 +1,10 @@
 /* eslint-disable spaced-comment */
-import { Message, User } from 'telegraf/typings/telegram-types';
 import fs from 'fs';
 import puppeteer from 'puppeteer';
 import axios from 'axios';
 import gm from 'gm';
 import { Context } from 'telegraf/typings/context';
+import { Message, User } from 'telegraf/typings/core/types/typegram';
 import BaseService from './base.service';
 import { BotCommandType, BotListener, TelegramError } from '../types/core/bot.types';
 import { CommandCategory, StickerCommand } from '../types/globals/commands.types';
@@ -21,7 +21,7 @@ import {
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import UpdateLastMessage from '../decorators/update.last.message.decorator';
 import { BotMessage } from '../types/globals/message.types';
-import { getUpdatedMessage } from '../utils/lists.util';
+import getUpdatedMessage from '../utils/lists.util';
 
 export default class StickerService extends BaseService {
   private static instance: StickerService;
@@ -107,7 +107,7 @@ export default class StickerService extends BaseService {
       || !ctx.update
       || !('title' in ctx.chat!)
       || !('reply_to_message' in ctx.message!)
-      || !(('text' in ctx.message.reply_to_message!))
+      || !('text' in ctx.message.reply_to_message!)
     ) {
       throw new Error('Wrong context');
     }
@@ -116,7 +116,7 @@ export default class StickerService extends BaseService {
     const text = reply.text!;
     const messageAuthor = reply.from!;
     const chatId = ctx!.chat!.id;
-    
+
     const owner = (await this.bot.app.telegram.getChatAdministrators(chatId)).find((usr) => usr.status === STATUS_CREATOR)?.user;
     const ownerId = owner ? owner.id : ctx.message!.from!.id;
 
@@ -137,11 +137,11 @@ export default class StickerService extends BaseService {
     await StickerService.createImage(text, messageAuthor, time);
     imageStream = fs.readFileSync(`${__dirname}/../../example.png`);
 
-    if(!imageStream) {
+    if (!imageStream) {
       throw new RepliableError('Не удалось получить изображение', ctx);
     }
 
-    await this.createStickerFromImage(ctx, chatId, ownerId, messageAuthor, imageStream);
+    await this.createStickerFromImage(ctx, chatId, ownerId, imageStream);
 
     next!();
   }
@@ -198,15 +198,34 @@ export default class StickerService extends BaseService {
     return ctx.reply(text, extra);
   }
 
-  private async createStickerFromImage(ctx: Context, chatId: number, ownerId: number, messageAuthor: User, imageStream: Buffer) {
+  protected initProps(): void {
+    this.categoryName = CommandCategory.STICKERS;
+  }
+
+  protected initListeners(): BotListener[] {
+    return [
+      {
+        type: BotCommandType.COMMAND,
+        name: StickerCommand.REMOVE_STICKER,
+        description: '[Ответ на стикер] удаляет стикер, созданый ботом, из пака',
+        callback: (ctx): Promise<Message> => this.removeStickerFromPack(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: StickerCommand.STICKERS,
+        description: 'Список наборов стикеров даного чата',
+        callback: (ctx): Promise<Message> => StickerService.sendStickerList(ctx),
+      },
+    ];
+  }
+
+  private async createStickerFromImage(ctx: Context, chatId: number, ownerId: number, imageStream: Buffer): Promise<void> {
     if (
       !('title' in ctx.chat!)
       || !('reply_to_message' in ctx.message!)
     ) {
       throw new Error('Wrong context');
     }
-
-    const reply = ctx.message!.reply_to_message!;
 
     const createdSet = await this.stickerSetRepo.getStickerSet(chatId);
 
@@ -285,26 +304,5 @@ export default class StickerService extends BaseService {
 
       await ctx.replyWithSticker(sticker);
     }
-  }
-
-  protected initProps(): void {
-    this.categoryName = CommandCategory.STICKERS;
-  }
-
-  protected initListeners(): BotListener[] {
-    return [
-      {
-        type: BotCommandType.COMMAND,
-        name: StickerCommand.REMOVE_STICKER,
-        description: '[Ответ на стикер] удаляет стикер, созданый ботом, из пака',
-        callback: (ctx): Promise<Message> => this.removeStickerFromPack(ctx),
-      },
-      {
-        type: BotCommandType.COMMAND,
-        name: StickerCommand.STICKERS,
-        description: 'Список наборов стикеров даного чата',
-        callback: (ctx): Promise<Message> => StickerService.sendStickerList(ctx),
-      },
-    ];
   }
 }

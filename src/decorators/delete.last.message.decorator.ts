@@ -1,5 +1,5 @@
 import { Context } from 'telegraf/typings/context';
-import { Message } from 'telegraf/typings/telegram-types';
+import { Message } from 'telegraf/typings/core/types/typegram';
 import Bot from '../core/bot';
 import LastMessageRepository from '../repositories/last.message.repo';
 

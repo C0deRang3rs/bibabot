@@ -1,10 +1,12 @@
 import { Context } from 'telegraf';
-import { Message } from 'telegraf/typings/telegram-types';
+import { Message } from 'telegraf/typings/core/types/typegram';
 import DeleteLastMessage from '../decorators/delete.last.message.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
 import ReplyWithError from '../decorators/reply.with.error.decorator';
 import { BotCommandType, BotListener } from '../types/core/bot.types';
-import { CategorizedCommands, CommandCategory, HelpCommand, SortedCommandCategories } from '../types/globals/commands.types';
+import {
+  CategorizedCommands, CommandCategory, HelpCommand, SortedCommandCategories,
+} from '../types/globals/commands.types';
 import { BotMessage } from '../types/globals/message.types';
 import BaseService from './base.service';
 
