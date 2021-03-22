@@ -1,6 +1,6 @@
 import moment from 'moment';
 import { Context } from 'telegraf/typings/context';
-import { MessageEntity } from 'telegraf/typings/core/types/typegram';
+import { Message, MessageEntity } from 'telegraf/typings/core/types/typegram';
 import CheckConfig from '../decorators/check.config.decorator';
 import CommandTemplate from '../decorators/command.template.decorator';
 import DeleteRequestMessage from '../decorators/delete.request.message.decorator';
@@ -11,6 +11,7 @@ import { BotCommandType, BotListener, CommandType } from '../types/core/bot.type
 import { CommandCategory, JailCommand } from '../types/globals/commands.types';
 import RepliableError from '../types/globals/repliable.error';
 import { ConfigProperty, IndividualConfigProperty } from '../types/services/config.service.types';
+import { YEAR_IN_MINUTES } from '../types/services/jail.service.types';
 import { JailPoll, PollAnswer, PollType } from '../types/services/poll.service.types';
 import optional from '../utils/decorators.utils';
 import plural from '../utils/pluralize.utils';
@@ -39,6 +40,48 @@ export default class JailService extends BaseService {
     }
 
     return JailService.instance;
+  }
+
+  @DeleteRequestMessage()
+  @ReplyWithError()
+  @CommandTemplate([CommandType.COMMAND, CommandType.NUMBER])
+  private async changeJailMinVote(ctx: Context): Promise<Message> {
+    if (
+      !ctx.from
+      || !ctx.chat
+      || !ctx.message
+      || !('text' in ctx.message)
+    ) {
+      throw new Error('Wrong context');
+    }
+
+    // TODO: вынести команды для создателя чата / админов с высокими правами
+    const chatId = ctx.chat.id;
+    const admins = await this.bot.app.telegram.getChatAdministrators(ctx.chat.id);
+    const isUserCreator = admins.find((user) => user.user.id === ctx.from!.id)?.status === 'creator';
+
+    if (!isUserCreator) {
+      throw new RepliableError('Команда доступна только основателю чата', ctx);
+    }
+
+    const membersCount = await this.bot.app.telegram.getChatMembersCount(chatId);
+    const minVoteCount = parseInt(ctx.message.text.split(' ')[1], 10);
+
+    if (minVoteCount > membersCount) {
+      throw new RepliableError('Нельзя указать больше чем кол-во пользователей в чате', ctx);
+    }
+
+    if (minVoteCount <= 1) {
+      throw new RepliableError('Нельзя указать меньше чем 2', ctx);
+    }
+
+    await this.configRepo.setConfigIndividualProperty(
+      chatId,
+      IndividualConfigProperty.JAIL_MIN_VOTE_COUNT,
+      minVoteCount.toString(),
+    );
+
+    return ctx.reply(`Минимальное количество голосов для бана изменено на ${minVoteCount}`);
   }
 
   @DeleteRequestMessage()
@@ -82,7 +125,7 @@ export default class JailService extends BaseService {
 
     if (timeParam && (!requestedTime || requestedTime <= 0)) throw new RepliableError('Wrong format', ctx);
 
-    const banTime = requestedTime || 1440;
+    const banTime = requestedTime > YEAR_IN_MINUTES ? Number.POSITIVE_INFINITY : requestedTime || 1440;
 
     const membersCount = await this.bot.app.telegram.getChatMembersCount(chatId);
     const defaultMinVoteCount = Math.floor(membersCount / 2).toString();
@@ -92,15 +135,16 @@ export default class JailService extends BaseService {
       defaultMinVoteCount,
     );
     const minVoteCount = parseInt(configMinVoteCount!, 10);
+    const releaseDate = moment().add(banTime, 'minutes').toDate();
 
     await this.pollService.createPoll<JailPoll>(
       {
         // eslint-disable-next-line max-len
-        title: `Забанить эту суку ${userMention}${banTime >= 527040 ? ' навсегда' : banTime !== 1440 ? ` на ${banTime} мин` : ' на день'}? Минимум ${minVoteCount} ${plural(['голос', 'голоса', 'голосов'], minVoteCount)}`,
+        title: `Забанить эту суку ${userMention}${banTime > YEAR_IN_MINUTES ? ' навсегда' : banTime !== 1440 ? ` на ${banTime} мин` : ' на день'}? Минимум ${minVoteCount} ${plural(['голос', 'голоса', 'голосов'], minVoteCount)}`,
         options: [PollAnswer.YES, PollAnswer.NO],
         extra: { is_anonymous: false },
         minVoteCount,
-        releaseDate: moment().add(banTime, 'minutes').toDate(),
+        releaseDate,
         pollType: PollType.VOTE_BAN,
         chatId,
         userId,
@@ -123,10 +167,10 @@ export default class JailService extends BaseService {
     const user = await this.bibaRepo.getBibaByIds(chatId, userId);
 
     if (user) {
-      await this.bot.app.telegram.sendMessage(
-        chatId,
-        `${user.username}, ты в бане, клоун! Возвращайся ${moment(releaseDate).fromNow()}.`,
-      );
+      const message = releaseDate
+        ? `${user.username}, ты в бане, клоун! Возвращайся ${moment(releaseDate).fromNow()}.`
+        : `${user.username}, прощай, клоун 🤡. Ты в бане навсегда.`;
+      await this.bot.app.telegram.sendMessage(chatId, message);
     }
   }
 
@@ -142,8 +186,8 @@ export default class JailService extends BaseService {
 
     const positiveVotes = ctx.poll!.options.find((option) => option.text === PollAnswer.YES)!.voter_count;
     const negativeVotes = ctx.poll!.options.find((option) => option.text === PollAnswer.NO)!.voter_count;
-    const isPositiveWon = positiveVotes > minVoteCount;
-    const isNegativeWon = negativeVotes > minVoteCount;
+    const isPositiveWon = positiveVotes >= minVoteCount;
+    const isNegativeWon = negativeVotes >= minVoteCount;
 
     if (isPositiveWon) {
       await this.imprisonUser(chatId, userId, releaseDate);
@@ -169,6 +213,12 @@ export default class JailService extends BaseService {
         name: JailCommand.VOTEBAN,
         description: 'Выставить пользователя на голосование за мут в чате на сутки. [можно указать время бана в минутах]',
         callback: (ctx): Promise<void> => this.voteban(ctx),
+      },
+      {
+        type: BotCommandType.COMMAND,
+        name: JailCommand.MIN_VOTE_COUNT,
+        description: 'Изменить колво голосов для бана. (Доступно только для основателя чата)',
+        callback: (ctx): Promise<Message> => this.changeJailMinVote(ctx),
       },
     ] as BotListener[];
   }

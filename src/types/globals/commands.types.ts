@@ -42,7 +42,6 @@ export enum ShopCommand {
 
 export enum ConfigCommand {
   CONFIG = 'config',
-  MIN_VOTE_COUNT = 'min_vote_count',
 }
 
 export enum StickerCommand {
@@ -52,6 +51,7 @@ export enum StickerCommand {
 
 export enum JailCommand {
   VOTEBAN = 'voteban',
+  MIN_VOTE_COUNT = 'min_vote_count',
 }
 
 export enum LabelCommand {
